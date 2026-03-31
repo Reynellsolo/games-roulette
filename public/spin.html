@@ -670,7 +670,7 @@ a:hover { text-decoration: underline; }
     <!-- ШАГ 2: Steam профиль -->
     <div class="step" id="step-steam">
       <h2 class="title" style="font-size: 22px;">🔗 Твой Steam</h2>
-      <p class="subtitle">Введи ссылку на профиль для проверки</p>
+      <p class="subtitle">Проверка Steam нужна только если хочешь исключить дубли</p>
 
       <div class="input-group">
         <label>Ссылка на профиль Steam</label>
@@ -699,8 +699,8 @@ a:hover { text-decoration: underline; }
         </span>
       </label>
 
-      <button class="btn btn-primary" id="btn-check-steam" disabled>
-        Проверить и продолжить →
+      <button class="btn btn-primary" id="btn-check-steam">
+        Продолжить к рулетке →
       </button>
       <button class="btn btn-secondary" id="btn-back-start">← Назад</button>
     </div>
@@ -742,17 +742,21 @@ a:hover { text-decoration: underline; }
         <h2 class="title" style="font-size: 22px;">🎉 Поздравляем!</h2>
         <img src="" alt="Game" class="game-cover" id="result-game-img">
         <h3 class="game-name" id="result-game-name">Название игры</h3>
-        
-        <div class="key-container" id="key-container" onclick="copyKey()">
-          <div class="key-label">Твой ключ Steam</div>
-          <div class="key-value" id="result-key">XXXXX-XXXXX-XXXXX</div>
-          <span class="key-copied" id="key-copied">Скопировано!</span>
-          <p class="key-hint">Нажми чтобы скопировать</p>
-        </div>
 
-        <a href="https://store.steampowered.com/account/registerkey" target="_blank" class="btn btn-success">
-          Активировать в Steam →
-        </a>
+        <button class="btn btn-success" id="btn-reveal-key" style="display: none;">✅ Получить ключ</button>
+
+        <div id="key-section" style="display: none;">
+          <div class="key-container" id="key-container" onclick="copyKey()">
+            <div class="key-label">Твой ключ Steam</div>
+            <div class="key-value" id="result-key">XXXXX-XXXXX-XXXXX</div>
+            <span class="key-copied" id="key-copied">Скопировано!</span>
+            <p class="key-hint">Нажми чтобы скопировать</p>
+          </div>
+
+          <a href="https://store.steampowered.com/account/registerkey" target="_blank" class="btn btn-success">
+            Активировать в Steam →
+          </a>
+        </div>
 
         <div class="post-options" id="post-options">
           <p class="post-options-title">Не понравилась игра?</p>
@@ -787,6 +791,17 @@ let linkCode = '';
 let linkData = null;
 let selectedBoost = 'free';
 let steamData = null;
+let steamVerified = false;
+let preloadedPayments = {
+  boost: null,
+  normal: null,
+  premium: null
+};
+let preloadingPayments = {
+  boost: null,
+  normal: null,
+  premium: null
+};
 
 // Цены по тирам
 const TIER_PRICES = {
@@ -854,6 +869,10 @@ async function loadLinkData() {
     // Проверяем состояние
     if (data.spinCompleted) {
       if (data.keyAssigned) {
+        if (!data.keyRevealed) {
+          preloadPayment('normal');
+          preloadPayment('premium');
+        }
         showResult(data);
       } else {
         showStep('step-result');
@@ -861,6 +880,7 @@ async function loadLinkData() {
         document.getElementById('result-assigned').style.display = 'none';
       }
     } else {
+      preloadPayment('boost');
       showStep('step-start');
     }
     
@@ -869,6 +889,56 @@ async function loadLinkData() {
     showStep('step-error');
     document.getElementById('error-text').textContent = 'Ошибка загрузки данных';
   }
+}
+
+async function preloadPayment(type) {
+  if (!linkCode) return null;
+  if (preloadedPayments[type]) return preloadedPayments[type];
+  if (preloadingPayments[type]) return preloadingPayments[type];
+
+  const endpoint = type === 'boost' ? '/games/api/create-boost-payment' : '/games/api/create-respin-payment';
+  const payload = type === 'boost' ? { code: linkCode } : { code: linkCode, type };
+
+  preloadingPayments[type] = fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.ok && data.payment_url) {
+        preloadedPayments[type] = data.payment_url;
+        return data.payment_url;
+      }
+      return null;
+    })
+    .catch(() => null)
+    .finally(() => {
+      preloadingPayments[type] = null;
+    });
+
+  return preloadingPayments[type];
+}
+
+async function getOrCreatePaymentUrl(type) {
+  if (preloadedPayments[type]) return preloadedPayments[type];
+
+  const preloaded = await preloadPayment(type);
+  if (preloaded) return preloaded;
+
+  const endpoint = type === 'boost' ? '/games/api/create-boost-payment' : '/games/api/create-respin-payment';
+  const payload = type === 'boost' ? { code: linkCode } : { code: linkCode, type };
+  const resp = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await resp.json();
+  if (data.ok && data.payment_url) {
+    preloadedPayments[type] = data.payment_url;
+    return data.payment_url;
+  }
+  throw new Error(data.error || 'Не удалось создать ссылку на оплату');
 }
 
 // === ОБНОВЛЕНИЕ TIER BADGE ===
@@ -913,22 +983,10 @@ document.getElementById('btn-to-steam').addEventListener('click', async () => {
     btn.innerHTML = '<span class="loader"></span>Переход к оплате...';
     
     try {
-      const resp = await fetch('/games/api/create-boost-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: linkCode })
-      });
-      const data = await resp.json();
-      
-      if (data.ok && data.payment_url) {
-        window.location.href = data.payment_url;
-      } else {
-        alert(data.error || 'Ошибка создания платежа');
-        btn.disabled = false;
-        btn.textContent = 'Продолжить →';
-      }
+      const paymentUrl = await getOrCreatePaymentUrl('boost');
+      window.location.href = paymentUrl;
     } catch (e) {
-      alert('Ошибка соединения');
+      alert(e.message || 'Ошибка соединения');
       btn.disabled = false;
       btn.textContent = 'Продолжить →';
     }
@@ -945,18 +1003,47 @@ document.getElementById('btn-back-start').addEventListener('click', () => {
 // === ВВОД STEAM URL ===
 const steamInput = document.getElementById('steam-url');
 const btnCheckSteam = document.getElementById('btn-check-steam');
+const excludeDuplicatesCheckbox = document.getElementById('exclude-duplicates');
 
 steamInput.addEventListener('input', () => {
-  btnCheckSteam.disabled = steamInput.value.length < 10;
+  steamVerified = false;
+  steamData = null;
   document.getElementById('steam-preview').classList.remove('visible');
   document.getElementById('steam-warning').classList.remove('visible');
+  updateSteamStepState();
 });
 
-// === ПРОВЕРКА STEAM ===
-btnCheckSteam.addEventListener('click', async () => {
-  const url = steamInput.value.trim();
-  if (!url) return;
-  
+excludeDuplicatesCheckbox.addEventListener('change', () => {
+  steamVerified = false;
+  steamData = null;
+  if (!excludeDuplicatesCheckbox.checked) {
+    document.getElementById('steam-preview').classList.remove('visible');
+    document.getElementById('steam-warning').classList.remove('visible');
+  }
+  updateSteamStepState();
+});
+
+function updateSteamStepState() {
+  const requiresSteam = excludeDuplicatesCheckbox.checked;
+  const hasSteamUrl = steamInput.value.trim().length >= 10;
+
+  if (!requiresSteam) {
+    btnCheckSteam.disabled = false;
+    btnCheckSteam.textContent = 'Продолжить к рулетке →';
+    return;
+  }
+
+  if (steamVerified) {
+    btnCheckSteam.disabled = false;
+    btnCheckSteam.textContent = 'Продолжить к рулетке →';
+    return;
+  }
+
+  btnCheckSteam.disabled = !hasSteamUrl;
+  btnCheckSteam.textContent = 'Проверить и продолжить →';
+}
+
+async function checkSteamProfile(url) {
   btnCheckSteam.disabled = true;
   btnCheckSteam.innerHTML = '<span class="loader"></span>Проверка...';
   
@@ -970,28 +1057,50 @@ btnCheckSteam.addEventListener('click', async () => {
     
     if (data.ok) {
       steamData = data;
+      steamVerified = true;
       document.getElementById('steam-avatar').src = data.steamAvatar;
       document.getElementById('steam-name').textContent = data.steamName;
       document.getElementById('steam-id').textContent = `ID: ${data.steamId}`;
       document.getElementById('steam-preview').classList.add('visible');
       document.getElementById('steam-warning').classList.remove('visible');
-      
-      btnCheckSteam.textContent = 'Продолжить к рулетке →';
-      btnCheckSteam.disabled = false;
-      btnCheckSteam.onclick = startRoulette;
+      updateSteamStepState();
+      return true;
     } else {
+      steamVerified = false;
+      steamData = null;
       document.getElementById('steam-preview').classList.remove('visible');
       document.getElementById('warning-title-text').textContent = 'Ошибка';
       document.getElementById('warning-text').textContent = data.error;
       document.getElementById('steam-warning').classList.add('visible');
-      
-      btnCheckSteam.textContent = 'Проверить и продолжить →';
-      btnCheckSteam.disabled = false;
+      updateSteamStepState();
+      return false;
     }
   } catch (e) {
+    steamVerified = false;
+    steamData = null;
     alert('Ошибка соединения');
-    btnCheckSteam.textContent = 'Проверить и продолжить →';
-    btnCheckSteam.disabled = false;
+    updateSteamStepState();
+    return false;
+  }
+}
+
+// === ПРОВЕРКА STEAM / ПЕРЕХОД ===
+btnCheckSteam.addEventListener('click', async () => {
+  if (!excludeDuplicatesCheckbox.checked) {
+    startRoulette();
+    return;
+  }
+
+  if (steamVerified) {
+    startRoulette();
+    return;
+  }
+
+  const url = steamInput.value.trim();
+  if (!url) return;
+  const ok = await checkSteamProfile(url);
+  if (ok) {
+    startRoulette();
   }
 });
 
@@ -1045,11 +1154,11 @@ document.getElementById('btn-spin').addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         code: linkCode,
-        steamProfileUrl: steamInput.value,
+        steamProfileUrl: excludeDuplicatesCheckbox.checked ? steamInput.value : null,
         steamId: steamData?.steamId,
         steamName: steamData?.steamName,
         steamAvatar: steamData?.steamAvatar,
-        excludeDuplicates: document.getElementById('exclude-duplicates').checked
+        excludeDuplicates: excludeDuplicatesCheckbox.checked
       })
     });
     const data = await resp.json();
@@ -1134,6 +1243,9 @@ function showResult(data) {
   showStep('step-result');
   document.getElementById('result-waiting').style.display = 'none';
   document.getElementById('result-assigned').style.display = 'block';
+  const keySection = document.getElementById('key-section');
+  const postOptions = document.getElementById('post-options');
+  const revealBtn = document.getElementById('btn-reveal-key');
   
   const gameImg = document.getElementById('result-game-img');
   if (data.steamAppId) {
@@ -1144,9 +1256,46 @@ function showResult(data) {
   
   document.getElementById('result-game-name').textContent = data.gameName || 'Игра';
   document.getElementById('result-key').textContent = data.gameKey || 'XXXXX-XXXXX-XXXXX';
+
+  if (data.keyRevealed) {
+    keySection.style.display = 'block';
+    revealBtn.style.display = 'none';
+    postOptions.style.display = 'none';
+  } else {
+    keySection.style.display = 'none';
+    revealBtn.style.display = 'block';
+    postOptions.style.display = 'block';
+    preloadPayment('normal');
+    preloadPayment('premium');
+  }
   
   // Конфетти при первом показе
   setTimeout(createConfetti, 500);
+}
+
+document.getElementById('btn-reveal-key').addEventListener('click', revealKey);
+
+async function revealKey() {
+  const revealBtn = document.getElementById('btn-reveal-key');
+  revealBtn.disabled = true;
+  revealBtn.innerHTML = '<span class="loader"></span>Открываем...';
+
+  try {
+    const resp = await fetch('/games/api/reveal-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: linkCode })
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      throw new Error(data.error || 'Не удалось открыть ключ');
+    }
+    await loadLinkData();
+  } catch (e) {
+    alert(e.message || 'Ошибка соединения');
+    revealBtn.disabled = false;
+    revealBtn.textContent = '✅ Получить ключ';
+  }
 }
 
 // === КОПИРОВАНИЕ КЛЮЧА ===
@@ -1169,21 +1318,10 @@ async function createRespinPayment(type) {
   btn.innerHTML = '<span class="loader"></span>...';
   
   try {
-    const resp = await fetch('/games/api/create-respin-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: linkCode, type })
-    });
-    const data = await resp.json();
-    
-    if (data.ok && data.payment_url) {
-      window.location.href = data.payment_url;
-    } else {
-      alert(data.error || 'Ошибка');
-      location.reload();
-    }
+    const paymentUrl = await getOrCreatePaymentUrl(type);
+    window.location.href = paymentUrl;
   } catch (e) {
-    alert('Ошибка соединения');
+    alert(e.message || 'Ошибка соединения');
     location.reload();
   }
 }
@@ -1199,6 +1337,7 @@ if (urlParams.get('respin_success') === '1') {
   alert('Оплата принята! Ожидайте новую игру.');
   window.location.href = window.location.pathname;
 }
+updateSteamStepState();
 </script>
 
 </body>

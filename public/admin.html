@@ -751,6 +751,15 @@ function updateStats(stats) {
   document.getElementById('tier-diamond').textContent = stats.byTier.diamond;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // === RENDER LINKS ===
 function renderLinks() {
   const tbody = document.getElementById('links-table');
@@ -795,12 +804,12 @@ function renderLinks() {
     
     const steamInfo = link.steamName ? `
       <div class="steam-mini">
-        <img src="${link.steamAvatar || ''}" onerror="this.style.display='none'">
-        <span>${link.steamName}</span>
+        <img src="${escapeHtml(link.steamAvatar || '')}" onerror="this.style.display='none'">
+        <span>${escapeHtml(link.steamName)}</span>
       </div>
     ` : '—';
     
-    const gameInfo = link.gameName || '—';
+    const gameInfo = link.gameName ? escapeHtml(link.gameName) : '—';
     
     let actions = '';
     if (link.spinCompleted && !link.keyAssigned) {
@@ -814,9 +823,9 @@ function renderLinks() {
     return `
       <tr>
         <td>
-          <span class="link-code" onclick="copyLink('${link.code}')" title="Нажмите чтобы скопировать">${link.code}</span>
+          <span class="link-code" onclick="copyLink('${escapeHtml(link.code)}')" title="Нажмите чтобы скопировать">${escapeHtml(link.code)}</span>
         </td>
-        <td><span class="badge badge-${link.tier}">${link.tier}</span></td>
+        <td><span class="badge badge-${escapeHtml(link.tier)}">${escapeHtml(link.tier)}</span></td>
         <td><span class="status-dot ${statusClass}"></span>${status}</td>
         <td>${steamInfo}</td>
         <td>${gameInfo}</td>
