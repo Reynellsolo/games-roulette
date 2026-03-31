@@ -60,6 +60,10 @@ body {
   overflow: hidden;
 }
 
+.card * {
+  line-height: 1.35;
+}
+
 .card::before {
   content: '';
   position: absolute;
@@ -173,7 +177,7 @@ body {
 .choice-header { display: flex; justify-content: center; align-items: center; margin-bottom: 6px; }
 .choice-title { font-weight: 700; font-size: 16px; }
 .choice-price { color: var(--gold); font-weight: 700; font-size: 14px; }
-.choice-desc { color: var(--text-muted); font-size: 13px; line-height: 1.4; }
+.choice-desc { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
 .choice-free { color: var(--success); font-weight: 600; }
 
 /* === ИНПУТЫ === */
@@ -522,9 +526,63 @@ body {
 
 .waiting-text {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.6;
   margin-bottom: 24px;
+}
+
+.analysis-panel {
+  background: rgba(10, 10, 25, 0.8);
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: left;
+  max-width: 520px;
+  margin: 0 auto 18px;
+}
+
+.analysis-line {
+  font-size: 13px;
+  color: #d1d5db;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  animation: analysisIn 0.5s ease forwards;
+}
+
+.analysis-line:nth-child(1) { animation-delay: 0.2s; }
+.analysis-line:nth-child(2) { animation-delay: 0.7s; }
+.analysis-line:nth-child(3) { animation-delay: 1.2s; }
+.analysis-line:nth-child(4) { animation-delay: 1.7s; }
+
+@keyframes analysisIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.analysis-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.analysis-progress > span {
+  display: block;
+  height: 100%;
+  width: 35%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #a78bfa, #fbbf24, #34d399);
+  box-shadow: 0 0 16px rgba(167,139,250,0.45);
+  animation: progressSweep 2.2s ease-in-out infinite;
+}
+
+@keyframes progressSweep {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
 }
 
 .result-assigned { padding: 20px 0; }
@@ -764,15 +822,15 @@ a:hover { text-decoration: underline; }
         <label>Страна магазина</label>
         <select id="countrySelect">
           <option value="">Выбери страну</option>
-          <option value="Россия">Россия</option>
-          <option value="Казахстан">Казахстан</option>
-          <option value="Украина">Украина</option>
-          <option value="Беларусь">Беларусь</option>
-          <option value="Турция">Турция</option>
-          <option value="Аргентина">Аргентина</option>
-          <option value="США">США</option>
-          <option value="Европа">Европа</option>
-          <option value="Другая">Другая</option>
+          <option value="Россия">🇷🇺 Россия</option>
+          <option value="Казахстан">🇰🇿 Казахстан</option>
+          <option value="Украина">🇺🇦 Украина</option>
+          <option value="Беларусь">🇧🇾 Беларусь</option>
+          <option value="Турция">🇹🇷 Турция</option>
+          <option value="Аргентина">🇦🇷 Аргентина</option>
+          <option value="США">🇺🇸 США</option>
+          <option value="Европа">🇪🇺 Европа</option>
+          <option value="Другая">🌍 Другая</option>
         </select>
       </div>
 
@@ -809,12 +867,18 @@ a:hover { text-decoration: underline; }
           <div class="waiting-ring"></div>
           <div class="waiting-ring"></div>
         </div>
-        <h2 class="waiting-title">Игра выбрана!</h2>
+        <h2 class="waiting-title">Формируем вашу игру…</h2>
         <p class="waiting-text">
-          Бот автоматически исключает повторы и формирует заказ.<br>
-          Обычно это занимает несколько минут.<br><br>
-          <strong>Страница обновится сама</strong>, можно просто подождать.
+          Игровой бот анализирует библиотеку и формирует оптимальный результат под ваш уровень.<br>
+          Обычно это занимает несколько минут.
         </p>
+        <div class="analysis-panel">
+          <div class="analysis-line">⚙️ Проверяем доступность ключей в пуле</div>
+          <div class="analysis-line">🧠 Анализируем совместимость по региону</div>
+          <div class="analysis-line">🎯 Исключаем повторы из библиотеки Steam</div>
+          <div class="analysis-line">📦 Подготавливаем выдачу и финальный заказ</div>
+          <div class="analysis-progress"><span></span></div>
+        </div>
         <button class="btn btn-secondary" onclick="location.reload()">🔄 Обновить страницу</button>
       </div>
 
