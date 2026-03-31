@@ -19,6 +19,8 @@ const gameLinkSchema = new mongoose.Schema({
   boostPaid: { type: Boolean, default: false },
   boostOrderId: { type: String, default: null },
   boostTransactionId: { type: String, default: null },
+  boostPaymentUrl: { type: String, default: null },
+  boostPreparedAt: { type: Date, default: null },
 
   // Доплата ПОСЛЕ (перекрутка)
   respinRequested: { type: Boolean, default: false },
@@ -27,6 +29,14 @@ const gameLinkSchema = new mongoose.Schema({
   respinOrderId: { type: String, default: null },
   respinTransactionId: { type: String, default: null },
   respinCount: { type: Number, default: 0 },
+  respinNormalOrderId: { type: String, default: null },
+  respinNormalTransactionId: { type: String, default: null },
+  respinNormalPaymentUrl: { type: String, default: null },
+  respinNormalPreparedAt: { type: Date, default: null },
+  respinPremiumOrderId: { type: String, default: null },
+  respinPremiumTransactionId: { type: String, default: null },
+  respinPremiumPaymentUrl: { type: String, default: null },
+  respinPremiumPreparedAt: { type: Date, default: null },
 
   // Ключ
   keyAssigned: { type: Boolean, default: false },
