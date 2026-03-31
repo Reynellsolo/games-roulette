@@ -37,7 +37,7 @@ body {
 
 /* === КОНТЕЙНЕР === */
 .container {
-  max-width: 480px;
+  max-width: 920px;
   margin: 0 auto;
   padding: 20px;
   min-height: 100vh;
@@ -364,7 +364,7 @@ body {
 }
 
 .roulette-track {
-  height: 170px;
+  height: 240px;
   overflow: hidden;
   position: relative;
 }
@@ -379,8 +379,8 @@ body {
 }
 
 .roulette-item {
-  width: 160px;
-  height: 170px;
+  width: 220px;
+  height: 240px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -393,8 +393,8 @@ body {
 }
 
 .roulette-item img {
-  width: 140px;
-  height: 65px;
+  width: 200px;
+  height: 94px;
   object-fit: cover;
   border-radius: 8px;
   margin-bottom: 8px;
@@ -402,13 +402,13 @@ body {
 }
 
 .roulette-item .item-name {
-  font-size: 12px;
+  font-size: 15px;
   color: var(--text-muted);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 150px;
+  max-width: 200px;
 }
 
 .roulette-item.mystery {
@@ -466,6 +466,7 @@ body {
 }
 
 .result-assigned { padding: 20px 0; }
+.result-assigned { text-align: center; }
 
 .game-cover {
   width: 100%;
@@ -481,6 +482,7 @@ body {
   font-size: 24px;
   font-weight: 800;
   margin-bottom: 20px;
+  text-align: center;
   background: linear-gradient(135deg, #fff, var(--accent-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -496,6 +498,13 @@ body {
   position: relative;
   cursor: pointer;
   transition: all 0.3s;
+  text-align: center;
+}
+
+.result-assigned .btn {
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .key-container:hover {
@@ -663,14 +672,12 @@ a:hover { text-decoration: underline; }
           <p class="choice-desc">Сразу крутить рулетку без проверки Steam</p>
         </div>
       </div>
-
-      <button class="btn btn-primary" id="btn-to-steam">Продолжить →</button>
     </div>
 
     <!-- ШАГ 2: Steam профиль -->
     <div class="step" id="step-steam">
       <h2 class="title" style="font-size: 22px;">🔗 Твой Steam</h2>
-      <p class="subtitle">Проверка Steam нужна только если хочешь исключить дубли</p>
+      <p class="subtitle">Проверка Steam нужна, если хочешь исключить повторные игры или игры, которые уже есть у тебя на аккаунте</p>
 
       <div class="input-group">
         <label>Ссылка на профиль Steam</label>
@@ -786,9 +793,6 @@ a:hover { text-decoration: underline; }
 
   </div>
   
-  <div class="footer">
-    © 2024 GameRoulette • <a href="/refund">Возврат</a> • <a href="/privacy">Политика</a>
-  </div>
 </div>
 
 <div class="confetti-container" id="confetti-container"></div>
@@ -993,22 +997,16 @@ document.querySelectorAll('.choice').forEach(choice => {
     document.querySelectorAll('.choice').forEach(c => c.classList.remove('selected'));
     choice.classList.add('selected');
     selectedMode = choice.dataset.mode;
+    excludeDuplicatesEnabled = selectedMode === 'exclude';
+    steamVerified = false;
+    steamData = null;
+    steamInput.value = '';
+    countrySelect.value = '';
+    document.getElementById('steam-preview').classList.remove('visible');
+    document.getElementById('steam-warning').classList.remove('visible');
+    updateSteamStepState();
+    showStep('step-steam');
   });
-});
-
-// По умолчанию выбран режим без исключения
-document.querySelector('.choice[data-mode="normal"]')?.classList.add('selected');
-
-// === КНОПКА "ПРОДОЛЖИТЬ" ===
-document.getElementById('btn-to-steam').addEventListener('click', async () => {
-  excludeDuplicatesEnabled = selectedMode === 'exclude';
-  steamVerified = false;
-  steamData = null;
-  steamInput.value = '';
-  document.getElementById('steam-preview').classList.remove('visible');
-  document.getElementById('steam-warning').classList.remove('visible');
-  updateSteamStepState();
-  showStep('step-steam');
 });
 
 // === КНОПКА "НАЗАД" ===
@@ -1135,25 +1133,15 @@ function initRouletteStrip() {
   const strip = document.getElementById('roulette-strip');
   strip.innerHTML = '';
   
-  // Создаём 50 элементов
-  for (let i = 0; i < 50; i++) {
+  // Создаём длинную бесконечную ленту
+  for (let i = 0; i < 140; i++) {
     const item = document.createElement('div');
-    
-    if (i % 7 === 0) {
-      // Мистери элемент
-      item.className = 'roulette-item mystery';
-      item.innerHTML = `
-        <span class="mystery-icon">❓</span>
-        <span class="item-name">Твоя игра</span>
-      `;
-    } else {
-      const game = SAMPLE_GAMES[i % SAMPLE_GAMES.length];
-      item.className = 'roulette-item';
-      item.innerHTML = `
-        <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/header.jpg" alt="${game.name}" onerror="this.src='https://via.placeholder.com/90x42?text=Game'">
-        <span class="item-name">${game.name}</span>
-      `;
-    }
+    const game = SAMPLE_GAMES[i % SAMPLE_GAMES.length];
+    item.className = 'roulette-item';
+    item.innerHTML = `
+      <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/header.jpg" alt="${game.name}" onerror="this.src='https://via.placeholder.com/200x94?text=Game'">
+      <span class="item-name">${game.name}</span>
+    `;
     
     strip.appendChild(item);
   }
@@ -1204,12 +1192,8 @@ document.getElementById('btn-spin').addEventListener('click', async () => {
 // === АНИМАЦИЯ РУЛЕТКИ ===
 function spinAnimation() {
   const strip = document.getElementById('roulette-strip');
-  const itemWidth = 160;
-  const totalItems = 50;
-  
-  // Останавливаемся на случайном mystery элементе
-  const mysteryIndexes = [0, 7, 14, 21, 28, 35, 42, 49];
-  const targetIndex = mysteryIndexes[Math.floor(Math.random() * mysteryIndexes.length) + 3] || 28;
+  const itemWidth = 220;
+  const targetIndex = 88 + Math.floor(Math.random() * 24);
   
   // Центрируем
   const trackWidth = document.querySelector('.roulette-track').offsetWidth;

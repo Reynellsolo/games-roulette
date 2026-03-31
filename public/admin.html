@@ -32,7 +32,7 @@ body {
 }
 
 .container {
-  max-width: 1800px;
+  max-width: 2200px;
   margin: 0 auto;
 }
 
@@ -143,6 +143,7 @@ body {
 }
 
 .form-group input::placeholder { color: var(--text-muted); }
+.form-group select option { background: var(--bg-input); color: var(--text); }
 
 .form-row {
   display: grid;
@@ -203,7 +204,7 @@ body {
 /* === GRID === */
 .grid {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 260px 1fr;
   gap: 24px;
 }
 
@@ -531,16 +532,6 @@ tr:hover { background: rgba(124, 58, 237, 0.05); }
   
   <div class="header">
     <h1>🎮 Game Roulette</h1>
-    <div class="header-stats">
-      <div class="stat-box">
-        <div class="stat-value" id="stat-waiting">0</div>
-        <div class="stat-label">Ожидают ключ</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value" id="stat-total">0</div>
-        <div class="stat-label">Всего</div>
-      </div>
-    </div>
   </div>
 
   <div class="grid">
@@ -774,23 +765,11 @@ async function loadLinks() {
 
 // === UPDATE STATS ===
 function updateStats(stats) {
-  document.getElementById('stat-waiting').textContent = stats.waiting;
-  document.getElementById('stat-total').textContent = stats.total;
-  
   document.getElementById('tier-starter').textContent = allLinks.filter(l => l.tier === 'starter' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
   document.getElementById('tier-bronze').textContent = allLinks.filter(l => l.tier === 'bronze' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
   document.getElementById('tier-silver').textContent = allLinks.filter(l => l.tier === 'silver' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
   document.getElementById('tier-gold').textContent = allLinks.filter(l => l.tier === 'gold' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
   document.getElementById('tier-diamond').textContent = allLinks.filter(l => l.tier === 'diamond' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function escapeHtml(value) {
@@ -864,7 +843,7 @@ function renderLinks() {
     } else if (!link.spinCompleted) {
       actions = `<button class="btn btn-danger btn-sm" onclick="deleteLink('${link.code}')">🗑️</button>`;
     } else {
-      actions = `<span style="color: var(--success);">✓</span>`;
+      actions = `<button class="btn btn-primary btn-sm" onclick="openAssignModal('${link.code}')">👁️ Детали</button>`;
     }
     
     return `
@@ -1002,6 +981,12 @@ function openAssignModal(code) {
           <span class="details-label">Steam</span>
           <span class="details-value">${link.steamName}</span>
         </div>
+        ${link.steamProfileUrl ? `
+        <div class="details-row">
+          <span class="details-label">Профиль Steam</span>
+          <span class="details-value"><a href="${link.steamProfileUrl}" target="_blank" rel="noopener noreferrer">Открыть профиль ↗</a></span>
+        </div>
+        ` : ''}
         ${link.excludeDuplicates ? `
         <div class="details-row">
           <span class="details-label">Исключить дубли</span>
