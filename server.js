@@ -169,6 +169,7 @@ app.get('/api/link/:code', async (req, res) => {
         valid: true,
         spinCompleted: true,
         keyAssigned: link.keyAssigned,
+        keyRevealed: link.keyRevealed,
         excludeDuplicates: link.excludeDuplicates,
         steamName: link.steamName,
         steamAvatar: link.steamAvatar,
@@ -200,6 +201,7 @@ app.post('/api/spin', async (req, res) => {
         ok: true,
         alreadySpun: true,
         keyAssigned: link.keyAssigned,
+        keyRevealed: link.keyRevealed,
         gameName: link.gameName,
         gameKey: link.gameKey,
         steamAppId: link.steamAppId
@@ -236,7 +238,12 @@ app.post('/api/admin/generate-links', adminAuth, async (req, res) => {
 
   const links = [];
   for (let i = 0; i < (count || 1); i++) {
-    const code = crypto.randomBytes(8).toString('base64url');
+    let code = '';
+    let exists = true;
+    while (exists) {
+      code = crypto.randomBytes(18).toString('base64url');
+      exists = Boolean(await GameLink.exists({ code }));
+    }
     const link = new GameLink({ code, tier, note: note || '' });
     await link.save();
     links.push({ code, tier, url: `${process.env.BASE_URL}/games/g/${code}` });
@@ -247,7 +254,7 @@ app.post('/api/admin/generate-links', adminAuth, async (req, res) => {
 
 // ═══════ ADMIN: Назначить ключ ═══════
 app.post('/api/admin/assign-key', adminAuth, async (req, res) => {
-  const { code, gameName, gameKey, steamAppId } = req.body;
+  const { code, gameName, gameKey, steamAppId, customerName, orderNumber } = req.body;
 
   const link = await GameLink.findOne({ code });
   if (!link) return res.json({ ok: false, error: 'Ссылка не найдена' });
@@ -256,6 +263,12 @@ app.post('/api/admin/assign-key', adminAuth, async (req, res) => {
   link.gameName = gameName;
   link.gameKey = gameKey;
   link.steamAppId = steamAppId || null;
+  link.customerName = customerName || null;
+  link.orderNumber = orderNumber || null;
+  link.respinRequested = false;
+  link.respinPaid = false;
+  link.respinType = null;
+  link.keyRevealed = false;
   await link.save();
 
   res.json({ ok: true });
@@ -267,7 +280,7 @@ app.get('/api/admin/links', adminAuth, async (req, res) => {
 
   const stats = {
     total: links.length,
-    waiting: links.filter(l => l.spinCompleted && !l.keyAssigned).length,
+    waiting: links.filter(l => l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length,
     completed: links.filter(l => l.keyAssigned).length,
     unused: links.filter(l => !l.spinCompleted).length,
     byTier: {
@@ -311,6 +324,13 @@ const TIER_PRICES = {
   gold: { base: 1000, boost: 300, respin: 300, premium: 600 },
   diamond: { base: 1500, boost: 450, respin: 450, premium: 900 }
 };
+
+function isFreshPreparedAt(dateValue, maxAgeMs = 30 * 60 * 1000) {
+  if (!dateValue) return false;
+  const preparedAt = new Date(dateValue).getTime();
+  if (!Number.isFinite(preparedAt)) return false;
+  return (Date.now() - preparedAt) < maxAgeMs;
+}
 
 // ═══════ ANTILOPAY HELPERS ═══════
 function signAntilopayRequest(body) {
@@ -359,6 +379,15 @@ app.post('/api/create-boost-payment', async (req, res) => {
       return res.json({ ok: false, error: 'Повышение шанса уже оплачено' });
     }
 
+    if (link.boostPaymentUrl && isFreshPreparedAt(link.boostPreparedAt)) {
+      return res.json({
+        ok: true,
+        payment_url: link.boostPaymentUrl,
+        order_id: link.boostOrderId,
+        preloaded: true
+      });
+    }
+
     const amount = TIER_PRICES[link.tier].boost;
     const order_id = `boost_${code}_${Date.now()}`;
 
@@ -403,6 +432,8 @@ app.post('/api/create-boost-payment', async (req, res) => {
 
     link.boostOrderId = order_id;
     link.boostTransactionId = result.payment_id;
+    link.boostPaymentUrl = result.payment_url;
+    link.boostPreparedAt = new Date();
     await link.save();
 
     console.log('[BOOST] Success! Payment URL:', result.payment_url);
@@ -426,6 +457,20 @@ app.post('/api/create-respin-payment', async (req, res) => {
 
     if (!['normal', 'premium'].includes(type)) {
       return res.json({ ok: false, error: 'Неверный тип' });
+    }
+
+    const isPremium = type === 'premium';
+    const existingPaymentUrl = isPremium ? link.respinPremiumPaymentUrl : link.respinNormalPaymentUrl;
+    const existingOrderId = isPremium ? link.respinPremiumOrderId : link.respinNormalOrderId;
+    const existingPreparedAt = isPremium ? link.respinPremiumPreparedAt : link.respinNormalPreparedAt;
+
+    if (existingPaymentUrl && isFreshPreparedAt(existingPreparedAt)) {
+      return res.json({
+        ok: true,
+        payment_url: existingPaymentUrl,
+        order_id: existingOrderId,
+        preloaded: true
+      });
     }
 
     const price_key = type === 'premium' ? 'premium' : 'respin';
@@ -467,6 +512,17 @@ app.post('/api/create-respin-payment', async (req, res) => {
     link.respinOrderId = order_id;
     link.respinTransactionId = result.payment_id;
     link.respinType = type;
+    if (isPremium) {
+      link.respinPremiumOrderId = order_id;
+      link.respinPremiumTransactionId = result.payment_id;
+      link.respinPremiumPaymentUrl = result.payment_url;
+      link.respinPremiumPreparedAt = new Date();
+    } else {
+      link.respinNormalOrderId = order_id;
+      link.respinNormalTransactionId = result.payment_id;
+      link.respinNormalPaymentUrl = result.payment_url;
+      link.respinNormalPreparedAt = new Date();
+    }
     await link.save();
 
     res.json({ ok: true, payment_url: result.payment_url, order_id });
@@ -492,18 +548,30 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
       if (link && !link.boostPaid) {
         link.boostPaid = true;
         link.boosted = true;
+        link.boostPaymentUrl = null;
+        link.boostPreparedAt = null;
         await link.save();
       }
     }
 
     // Обработка respin
     if (order_id.startsWith('respin_')) {
-      const link = await GameLink.findOne({ respinOrderId: order_id });
+      const link = await GameLink.findOne({
+        $or: [
+          { respinOrderId: order_id },
+          { respinNormalOrderId: order_id },
+          { respinPremiumOrderId: order_id }
+        ]
+      });
       if (link && !link.respinPaid) {
         link.respinPaid = true;
         link.respinRequested = true;
         link.respinCount += 1;
         link.keyRevealed = false; // ключ больше не показываем
+        link.respinNormalPaymentUrl = null;
+        link.respinNormalPreparedAt = null;
+        link.respinPremiumPaymentUrl = null;
+        link.respinPremiumPreparedAt = null;
         await link.save();
       }
     }
@@ -533,4 +601,3 @@ app.post('/api/reveal-key', async (req, res) => {
     res.status(500).json({ ok: false, error: 'Ошибка сервера' });
   }
 });
-

@@ -32,7 +32,7 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 2200px;
   margin: 0 auto;
 }
 
@@ -143,6 +143,7 @@ body {
 }
 
 .form-group input::placeholder { color: var(--text-muted); }
+.form-group select option { background: var(--bg-input); color: var(--text); }
 
 .form-row {
   display: grid;
@@ -203,7 +204,7 @@ body {
 /* === GRID === */
 .grid {
   display: grid;
-  grid-template-columns: 350px 1fr;
+  grid-template-columns: 260px 1fr;
   gap: 24px;
 }
 
@@ -440,6 +441,9 @@ tr:hover { background: rgba(124, 58, 237, 0.05); }
   font-family: 'Consolas', monospace;
   font-size: 12px;
   word-break: break-all;
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow-y: auto;
   display: none;
 }
 
@@ -528,16 +532,6 @@ tr:hover { background: rgba(124, 58, 237, 0.05); }
   
   <div class="header">
     <h1>🎮 Game Roulette</h1>
-    <div class="header-stats">
-      <div class="stat-box">
-        <div class="stat-value" id="stat-waiting">0</div>
-        <div class="stat-label">Ожидают ключ</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value" id="stat-total">0</div>
-        <div class="stat-label">Всего</div>
-      </div>
-    </div>
   </div>
 
   <div class="grid">
@@ -555,47 +549,44 @@ tr:hover { background: rgba(124, 58, 237, 0.05); }
           <div class="form-group">
             <label>Тир</label>
             <select id="gen-tier">
-              <option value="starter">Starter ⚪</option>
-              <option value="bronze">Bronze 🥉</option>
-              <option value="silver">Silver 🥈</option>
-              <option value="gold">Gold 🥇</option>
-              <option value="diamond">Diamond 💎</option>
+              <option value="starter">1 уровень</option>
+              <option value="bronze">2 уровень</option>
+              <option value="silver">3 уровень</option>
+              <option value="gold">4 уровень</option>
+              <option value="diamond">5 уровень</option>
             </select>
           </div>
-        </div>
-        <div class="form-group">
-          <label>Заметка (опционально)</label>
-          <input type="text" id="gen-note" placeholder="Ozon заказ #123...">
         </div>
         <button class="btn btn-primary btn-full" id="btn-generate">
           ✨ Сгенерировать
         </button>
+        <button class="btn btn-success btn-full" id="btn-copy-generated" style="margin-top: 10px;">📋 Скопировать все ссылки</button>
         <div class="link-preview" id="generated-links"></div>
       </div>
 
       <!-- Tier Stats -->
       <div class="card">
-        <h3 class="card-title"><span>📊</span> Свободные ссылки</h3>
+        <h3 class="card-title"><span>⏳</span> Очередь ожидания</h3>
         <div id="tier-stats">
           <div class="details-panel">
             <div class="details-row">
-              <span class="details-label">⚪ Starter</span>
+              <span class="details-label">1 уровень</span>
               <span class="details-value" id="tier-starter">0</span>
             </div>
             <div class="details-row">
-              <span class="details-label">🥉 Bronze</span>
+              <span class="details-label">2 уровень</span>
               <span class="details-value" id="tier-bronze">0</span>
             </div>
             <div class="details-row">
-              <span class="details-label">🥈 Silver</span>
+              <span class="details-label">3 уровень</span>
               <span class="details-value" id="tier-silver">0</span>
             </div>
             <div class="details-row">
-              <span class="details-label">🥇 Gold</span>
+              <span class="details-label">4 уровень</span>
               <span class="details-value" id="tier-gold">0</span>
             </div>
             <div class="details-row">
-              <span class="details-label">💎 Diamond</span>
+              <span class="details-label">5 уровень</span>
               <span class="details-value" id="tier-diamond">0</span>
             </div>
           </div>
@@ -609,8 +600,8 @@ tr:hover { background: rgba(124, 58, 237, 0.05); }
         <h3 class="card-title"><span>📋</span> Все ссылки</h3>
         
         <div class="filters">
-          <button class="filter-btn active" data-filter="all">Все</button>
-          <button class="filter-btn" data-filter="waiting">⏳ Ожидают ключ</button>
+          <button class="filter-btn active" data-filter="waiting">⏳ Ожидают ключ</button>
+          <button class="filter-btn" data-filter="all">Все</button>
           <button class="filter-btn" data-filter="done">✅ Выданы</button>
           <button class="filter-btn" data-filter="unused">⚪ Не использованы</button>
         </div>
@@ -624,12 +615,14 @@ tr:hover { background: rgba(124, 58, 237, 0.05); }
                 <th>Статус</th>
                 <th>Steam</th>
                 <th>Игра</th>
+                <th>№ заказа</th>
+                <th>ФИО</th>
                 <th>Действия</th>
               </tr>
             </thead>
             <tbody id="links-table">
               <tr>
-                <td colspan="6">
+                <td colspan="8">
                   <div class="page-loader"><span class="loader"></span></div>
                 </td>
               </tr>
@@ -661,12 +654,35 @@ tr:hover { background: rgba(124, 58, 237, 0.05); }
       <label>Steam App ID (для обложки)</label>
       <input type="text" id="assign-steam-appid" placeholder="1245620">
     </div>
+    <div class="form-group">
+      <label>Номер заказа</label>
+      <input type="text" id="assign-order-number" placeholder="ORD-10245">
+    </div>
+    <div class="form-group">
+      <label>ФИО покупателя</label>
+      <input type="text" id="assign-customer-name" placeholder="Иванов Иван Иванович">
+    </div>
     
     <input type="hidden" id="assign-code">
     
     <div class="modal-actions">
       <button class="btn btn-danger" onclick="closeModal('modal-assign')">Отмена</button>
       <button class="btn btn-success" id="btn-assign-submit">✓ Назначить</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal">
+    <h3 class="modal-title"><span>🗑️</span> Удалить ссылку?</h3>
+    <p style="color: var(--text-muted); line-height: 1.6;">
+      Это действие нельзя отменить. Ссылка будет удалена навсегда.
+    </p>
+    <input type="hidden" id="delete-code">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-delete')">Отмена</button>
+      <button class="btn btn-danger" id="btn-delete-confirm">Удалить</button>
     </div>
   </div>
 </div>
@@ -678,7 +694,15 @@ tr:hover { background: rgba(124, 58, 237, 0.05); }
 // === ПЕРЕМЕННЫЕ ===
 let adminSecret = localStorage.getItem('adminSecret') || '';
 let allLinks = [];
-let currentFilter = 'all';
+let currentFilter = 'waiting';
+
+const TIER_LABELS = {
+  starter: '1 уровень',
+  bronze: '2 уровень',
+  silver: '3 уровень',
+  gold: '4 уровень',
+  diamond: '5 уровень'
+};
 
 // === INIT ===
 document.addEventListener('DOMContentLoaded', () => {
@@ -741,14 +765,20 @@ async function loadLinks() {
 
 // === UPDATE STATS ===
 function updateStats(stats) {
-  document.getElementById('stat-waiting').textContent = stats.waiting;
-  document.getElementById('stat-total').textContent = stats.total;
-  
-  document.getElementById('tier-starter').textContent = stats.byTier.starter;
-  document.getElementById('tier-bronze').textContent = stats.byTier.bronze;
-  document.getElementById('tier-silver').textContent = stats.byTier.silver;
-  document.getElementById('tier-gold').textContent = stats.byTier.gold;
-  document.getElementById('tier-diamond').textContent = stats.byTier.diamond;
+  document.getElementById('tier-starter').textContent = allLinks.filter(l => l.tier === 'starter' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
+  document.getElementById('tier-bronze').textContent = allLinks.filter(l => l.tier === 'bronze' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
+  document.getElementById('tier-silver').textContent = allLinks.filter(l => l.tier === 'silver' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
+  document.getElementById('tier-gold').textContent = allLinks.filter(l => l.tier === 'gold' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
+  document.getElementById('tier-diamond').textContent = allLinks.filter(l => l.tier === 'diamond' && l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // === RENDER LINKS ===
@@ -757,7 +787,7 @@ function renderLinks() {
   
   let filtered = allLinks;
   if (currentFilter === 'waiting') {
-    filtered = allLinks.filter(l => l.spinCompleted && !l.keyAssigned);
+    filtered = allLinks.filter(l => l.spinCompleted && (!l.keyAssigned || l.respinRequested));
   } else if (currentFilter === 'done') {
     filtered = allLinks.filter(l => l.keyAssigned);
   } else if (currentFilter === 'unused') {
@@ -767,7 +797,7 @@ function renderLinks() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6">
+        <td colspan="8">
           <div class="empty">
             <div class="empty-icon">📭</div>
             <div class="empty-text">Нет ссылок</div>
@@ -782,7 +812,10 @@ function renderLinks() {
     let status = '';
     let statusClass = '';
     
-    if (link.keyAssigned) {
+    if (link.respinRequested) {
+      status = '<span class="badge badge-waiting">Перекрутка</span>';
+      statusClass = 'waiting';
+    } else if (link.keyAssigned) {
       status = '<span class="badge badge-done">Выдан</span>';
       statusClass = 'done';
     } else if (link.spinCompleted) {
@@ -795,31 +828,35 @@ function renderLinks() {
     
     const steamInfo = link.steamName ? `
       <div class="steam-mini">
-        <img src="${link.steamAvatar || ''}" onerror="this.style.display='none'">
-        <span>${link.steamName}</span>
+        <img src="${escapeHtml(link.steamAvatar || '')}" onerror="this.style.display='none'">
+        <span>${escapeHtml(link.steamName)}</span>
       </div>
     ` : '—';
     
-    const gameInfo = link.gameName || '—';
+    const gameInfo = link.gameName ? escapeHtml(link.gameName) : '—';
+    const orderInfo = link.orderNumber ? escapeHtml(link.orderNumber) : '—';
+    const customerInfo = link.customerName ? escapeHtml(link.customerName) : '—';
     
     let actions = '';
-    if (link.spinCompleted && !link.keyAssigned) {
-      actions = `<button class="btn btn-success btn-sm" onclick="openAssignModal('${link.code}')">🎮 Назначить</button>`;
+    if (link.spinCompleted && (!link.keyAssigned || link.respinRequested)) {
+      actions = `<button class="btn btn-success btn-sm" onclick="openAssignModal('${link.code}')">${link.respinRequested ? '♻️ Переназначить' : '🎮 Назначить'}</button>`;
     } else if (!link.spinCompleted) {
       actions = `<button class="btn btn-danger btn-sm" onclick="deleteLink('${link.code}')">🗑️</button>`;
     } else {
-      actions = `<span style="color: var(--success);">✓</span>`;
+      actions = `<button class="btn btn-primary btn-sm" onclick="openAssignModal('${link.code}')">👁️ Детали</button>`;
     }
     
     return `
       <tr>
         <td>
-          <span class="link-code" onclick="copyLink('${link.code}')" title="Нажмите чтобы скопировать">${link.code}</span>
+          <span class="link-code" onclick="copyLink('${escapeHtml(link.code)}')" title="Нажмите чтобы скопировать">${escapeHtml(link.code)}</span>
         </td>
-        <td><span class="badge badge-${link.tier}">${link.tier}</span></td>
+        <td><span class="badge badge-${escapeHtml(link.tier)}">${escapeHtml(TIER_LABELS[link.tier] || link.tier)}</span></td>
         <td><span class="status-dot ${statusClass}"></span>${status}</td>
         <td>${steamInfo}</td>
         <td>${gameInfo}</td>
+        <td>${orderInfo}</td>
+        <td>${customerInfo}</td>
         <td>${actions}</td>
       </tr>
     `;
@@ -840,7 +877,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 document.getElementById('btn-generate').addEventListener('click', async () => {
   const count = parseInt(document.getElementById('gen-count').value) || 1;
   const tier = document.getElementById('gen-tier').value;
-  const note = document.getElementById('gen-note').value;
   
   const btn = document.getElementById('btn-generate');
   btn.disabled = true;
@@ -853,7 +889,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
         'Content-Type': 'application/json',
         'x-admin-secret': adminSecret
       },
-      body: JSON.stringify({ count, tier, note })
+      body: JSON.stringify({ count, tier })
     });
     const data = await resp.json();
     
@@ -874,6 +910,20 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
   btn.innerHTML = '✨ Сгенерировать';
 });
 
+document.getElementById('btn-copy-generated').addEventListener('click', async () => {
+  const linksText = document.getElementById('generated-links').textContent.trim();
+  if (!linksText) {
+    showToast('Сначала сгенерируйте ссылки', true);
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(linksText);
+    showToast('Все ссылки скопированы');
+  } catch (e) {
+    showToast('Не удалось скопировать', true);
+  }
+});
+
 // === COPY LINK ===
 function copyLink(code) {
   const url = `${window.location.origin}/games/g/${code}`;
@@ -884,19 +934,31 @@ function copyLink(code) {
 
 // === DELETE LINK ===
 async function deleteLink(code) {
-  if (!confirm('Удалить эту ссылку?')) return;
-  
+  document.getElementById('delete-code').value = code;
+  document.getElementById('modal-delete').classList.add('active');
+}
+
+document.getElementById('btn-delete-confirm').addEventListener('click', async () => {
+  const code = document.getElementById('delete-code').value;
+  if (!code) return;
+  const btn = document.getElementById('btn-delete-confirm');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>';
   try {
     await fetch(`/games/api/admin/link/${code}`, {
       method: 'DELETE',
       headers: { 'x-admin-secret': adminSecret }
     });
     showToast('Удалено');
+    closeModal('modal-delete');
     loadLinks();
   } catch (e) {
     showToast('Ошибка', true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Удалить';
   }
-}
+});
 
 // === ASSIGN MODAL ===
 function openAssignModal(code) {
@@ -904,9 +966,11 @@ function openAssignModal(code) {
   if (!link) return;
   
   document.getElementById('assign-code').value = code;
-  document.getElementById('assign-game-name').value = '';
+  document.getElementById('assign-game-name').value = link.respinRequested ? (link.gameName || '') : '';
   document.getElementById('assign-game-key').value = '';
-  document.getElementById('assign-steam-appid').value = '';
+  document.getElementById('assign-steam-appid').value = link.steamAppId || '';
+  document.getElementById('assign-order-number').value = link.orderNumber || '';
+  document.getElementById('assign-customer-name').value = link.customerName || '';
   
   // Show steam info
   let steamHtml = '';
@@ -917,6 +981,12 @@ function openAssignModal(code) {
           <span class="details-label">Steam</span>
           <span class="details-value">${link.steamName}</span>
         </div>
+        ${link.steamProfileUrl ? `
+        <div class="details-row">
+          <span class="details-label">Профиль Steam</span>
+          <span class="details-value"><a href="${link.steamProfileUrl}" target="_blank" rel="noopener noreferrer">Открыть профиль ↗</a></span>
+        </div>
+        ` : ''}
         ${link.excludeDuplicates ? `
         <div class="details-row">
           <span class="details-label">Исключить дубли</span>
@@ -927,6 +997,12 @@ function openAssignModal(code) {
         <div class="details-row">
           <span class="details-label">Буст оплачен</span>
           <span class="details-value" style="color: var(--gold);">💰 Да</span>
+        </div>
+        ` : ''}
+        ${link.respinRequested ? `
+        <div class="details-row">
+          <span class="details-label">Статус</span>
+          <span class="details-value" style="color: var(--warning);">♻️ Запрошена перекрутка (прошлый ключ нужно забрать)</span>
         </div>
         ` : ''}
       </div>
@@ -956,6 +1032,8 @@ document.getElementById('btn-assign-submit').addEventListener('click', async () 
   const gameName = document.getElementById('assign-game-name').value.trim();
   const gameKey = document.getElementById('assign-game-key').value.trim();
   const steamAppId = document.getElementById('assign-steam-appid').value.trim();
+  const orderNumber = document.getElementById('assign-order-number').value.trim();
+  const customerName = document.getElementById('assign-customer-name').value.trim();
   
   if (!gameName || !gameKey) {
     showToast('Заполните название и ключ', true);
@@ -973,7 +1051,7 @@ document.getElementById('btn-assign-submit').addEventListener('click', async () 
         'Content-Type': 'application/json',
         'x-admin-secret': adminSecret
       },
-      body: JSON.stringify({ code, gameName, gameKey, steamAppId })
+      body: JSON.stringify({ code, gameName, gameKey, steamAppId, orderNumber, customerName })
     });
     const data = await resp.json();
     
@@ -1006,10 +1084,10 @@ function showToast(message, isError = false) {
 
 // === AUTO REFRESH ===
 setInterval(() => {
-  if (document.getElementById('main-panel').style.display !== 'none') {
+  if (document.visibilityState === 'visible' && document.getElementById('main-panel').style.display !== 'none') {
     loadLinks();
   }
-}, 30000); // каждые 30 сек
+}, 5000); // live-обновление каждые 5 сек
 </script>
 
 </body>
