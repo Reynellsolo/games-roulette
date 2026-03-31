@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎰 Случайная игра Steam</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-dark: #0d0d1a;
+  --bg-card: #14142a;
+  --bg-input: #1a1a35;
+  --border: #2a2a4a;
+  --accent: #7c3aed;
+  --accent-light: #a78bfa;
+  --accent-glow: rgba(124, 58, 237, 0.4);
+  --gold: #fbbf24;
+  --gold-glow: rgba(251, 191, 36, 0.4);
+  --success: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.4);
+  --error: #ef4444;
+  --text: #e2e8f0;
+  --text-muted: #64748b;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-dark);
+  background-image: 
+    radial-gradient(ellipse at top, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom, rgba(251, 191, 36, 0.1) 0%, transparent 50%);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* === КОНТЕЙНЕР === */
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* === КАРТОЧКА === */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 32px 24px;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-light), transparent);
+}
+
+/* === ЗАГОЛОВОК === */
+.logo {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.logo-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 8px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 800;
+  text-align: center;
+  background: linear-gradient(135deg, var(--accent-light), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+/* === TIER BADGE === */
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin: 0 auto 24px;
+}
+
+.tier-starter { background: linear-gradient(135deg, #374151, #1f2937); color: #9ca3af; border: 1px solid #4b5563; }
+.tier-bronze { background: linear-gradient(135deg, #92400e, #78350f); color: #fbbf24; border: 1px solid #b45309; }
+.tier-silver { background: linear-gradient(135deg, #374151, #1f2937); color: #e2e8f0; border: 1px solid #6b7280; }
+.tier-gold { background: linear-gradient(135deg, #854d0e, #713f12); color: #fde047; border: 1px solid #ca8a04; box-shadow: 0 0 20px var(--gold-glow); }
+.tier-diamond { background: linear-gradient(135deg, #4c1d95, #5b21b6); color: #c4b5fd; border: 1px solid #7c3aed; box-shadow: 0 0 20px var(--accent-glow); }
+
+/* === ШАГИ === */
+.step { display: none; animation: fadeSlide 0.4s ease; }
+.step.active { display: block; }
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === КНОПКИ ВЫБОРА === */
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.choice {
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.choice::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 0.5s;
+}
+
+.choice:hover::before { left: 100%; }
+.choice:hover { border-color: var(--accent); transform: translateX(4px); }
+.choice.selected { border-color: var(--accent); background: rgba(124, 58, 237, 0.1); box-shadow: 0 0 30px var(--accent-glow); }
+
+.choice-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.choice-title { font-weight: 700; font-size: 16px; }
+.choice-price { color: var(--gold); font-weight: 700; font-size: 14px; }
+.choice-desc { color: var(--text-muted); font-size: 13px; line-height: 1.4; }
+.choice-free { color: var(--success); font-weight: 600; }
+
+/* === ИНПУТЫ === */
+.input-group { margin-bottom: 20px; }
+
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 15px;
+  transition: all 0.3s;
+  outline: none;
+}
+
+.input-group input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.input-group input::placeholder { color: var(--text-muted); }
+
+/* === STEAM ПРЕВЬЮ === */
+.steam-preview {
+  display: none;
+  align-items: center;
+  gap: 16px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 2px solid var(--success);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 20px;
+  animation: fadeSlide 0.4s ease;
+}
+
+.steam-preview.visible { display: flex; }
+
+.steam-preview img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--success);
+}
+
+.steam-info { flex: 1; }
+.steam-name { font-weight: 700; font-size: 16px; }
+.steam-id { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.steam-status { font-size: 12px; color: var(--success); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+
+/* === ПРЕДУПРЕЖДЕНИЕ === */
+.warning {
+  display: none;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--error);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  animation: shake 0.5s ease;
+}
+
+.warning.visible { display: block; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+.warning-title { color: var(--error); font-weight: 700; font-size: 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.warning-text { color: #fca5a5; font-size: 13px; line-height: 1.5; }
+
+/* === КНОПКИ === */
+.btn {
+  width: 100%;
+  padding: 18px 24px;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #9333ea);
+  color: white;
+  box-shadow: 0 4px 15px var(--accent-glow);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px var(--accent-glow);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), #f59e0b);
+  color: #1a1a2e;
+  box-shadow: 0 4px 15px var(--gold-glow);
+}
+
+.btn-gold:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px var(--gold-glow);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, var(--success), #059669);
+  color: white;
+  box-shadow: 0 4px 15px var(--success-glow);
+}
+
+.btn-success:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px var(--success-glow);
+}
+
+.btn-secondary {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 2px solid var(--border);
+}
+
+.btn-secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+
+.btn + .btn { margin-top: 12px; }
+
+/* === РУЛЕТКА === */
+.roulette-section { margin: 24px 0; }
+
+.roulette-wrapper {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  background: var(--bg-dark);
+}
+
+.roulette-pointer {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--accent), var(--gold));
+  z-index: 10;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.roulette-pointer::before {
+  content: '▼';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--accent-light);
+  font-size: 20px;
+  text-shadow: 0 0 10px var(--accent-glow);
+}
+
+.roulette-pointer::after {
+  content: '▲';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--gold);
+  font-size: 20px;
+  text-shadow: 0 0 10px var(--gold-glow);
+}
+
+.roulette-track {
+  height: 140px;
+  overflow: hidden;
+  position: relative;
+}
+
+.roulette-strip {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  will-change: transform;
+}
+
+.roulette-item {
+  width: 110px;
+  height: 140px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border);
+  padding: 10px;
+  background: var(--bg-card);
+  transition: all 0.3s;
+}
+
+.roulette-item img {
+  width: 90px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.roulette-item .item-name {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100px;
+}
+
+.roulette-item.mystery {
+  background: linear-gradient(145deg, #2d1b69, #1a103d);
+}
+
+.roulette-item.mystery .mystery-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { filter: drop-shadow(0 0 5px var(--accent-glow)); }
+  to { filter: drop-shadow(0 0 20px var(--accent)); }
+}
+
+.roulette-item.mystery .item-name { color: var(--accent-light); font-weight: 600; }
+
+.roulette-item.winner {
+  background: linear-gradient(145deg, rgba(124, 58, 237, 0.3), rgba(251, 191, 36, 0.2));
+  animation: winner-pulse 0.5s ease infinite alternate;
+}
+
+@keyframes winner-pulse {
+  from { box-shadow: inset 0 0 20px var(--accent-glow); }
+  to { box-shadow: inset 0 0 40px var(--gold-glow); }
+}
+
+/* === РЕЗУЛЬТАТ === */
+.result-section { text-align: center; }
+
+.result-waiting {
+  padding: 40px 20px;
+}
+
+.waiting-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.waiting-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--accent-light);
+}
+
+.waiting-text {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.result-assigned { padding: 20px 0; }
+
+.game-cover {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 16px;
+  margin: 0 auto 20px;
+  display: block;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  border: 2px solid var(--border);
+}
+
+.game-name {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #fff, var(--accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.key-container {
+  background: var(--bg-input);
+  border: 2px solid var(--success);
+  border-radius: 16px;
+  padding: 20px;
+  margin: 20px 0;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.key-container:hover {
+  box-shadow: 0 0 30px var(--success-glow);
+}
+
+.key-label {
+  font-size: 11px;
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.key-value {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  word-break: break-all;
+  color: #fff;
+}
+
+.key-copied {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  background: var(--success);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.key-copied.visible { opacity: 1; }
+
+.key-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* === ОПЦИИ ПОСЛЕ РЕЗУЛЬТАТА === */
+.post-options {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.post-options-title {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* === КОНФЕТТИ === */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  animation: confetti-fall linear forwards;
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* === ЛОАДЕР === */
+.loader {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === ЧЕКБОКС === */
+.checkbox-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 20px 0;
+  cursor: pointer;
+}
+
+.checkbox-group input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.checkbox-label { font-size: 14px; line-height: 1.5; }
+.checkbox-label small { display: block; color: var(--text-muted); margin-top: 4px; font-size: 12px; }
+
+/* === ССЫЛКИ === */
+a { color: var(--accent-light); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* === FOOTER === */
+.footer {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    
+    <!-- ШАГ 1: Начало -->
+    <div class="step active" id="step-start">
+      <div class="logo">
+        <span class="logo-icon">🎰</span>
+      </div>
+      <h1 class="title">Случайная игра</h1>
+      <p class="subtitle">Испытай удачу и получи игру для Steam</p>
+      
+      <div style="text-align: center;">
+        <span class="tier-badge tier-starter" id="tier-badge">⏳ Загрузка...</span>
+      </div>
+
+      <div class="choices" id="boost-choices">
+        <div class="choice" data-boost="free">
+          <div class="choice-header">
+            <span class="choice-title">🎲 Обычный шанс</span>
+            <span class="choice-price choice-free">Бесплатно</span>
+          </div>
+          <p class="choice-desc">Стандартные шансы на все игры в пуле</p>
+        </div>
+        <div class="choice" data-boost="paid">
+          <div class="choice-header">
+            <span class="choice-title">🚀 Повышенный шанс</span>
+            <span class="choice-price" id="boost-price">+99 ₽</span>
+          </div>
+          <p class="choice-desc">Увеличенный шанс получить дорогую игру из пула</p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-to-steam">Продолжить →</button>
+    </div>
+
+    <!-- ШАГ 2: Steam профиль -->
+    <div class="step" id="step-steam">
+      <h2 class="title" style="font-size: 22px;">🔗 Твой Steam</h2>
+      <p class="subtitle">Введи ссылку на профиль для проверки</p>
+
+      <div class="input-group">
+        <label>Ссылка на профиль Steam</label>
+        <input type="text" id="steam-url" placeholder="https://steamcommunity.com/id/...">
+      </div>
+
+      <div class="steam-preview" id="steam-preview">
+        <img src="" alt="Avatar" id="steam-avatar">
+        <div class="steam-info">
+          <div class="steam-name" id="steam-name">Имя</div>
+          <div class="steam-id" id="steam-id">ID</div>
+          <div class="steam-status">✓ Профиль открыт</div>
+        </div>
+      </div>
+
+      <div class="warning" id="steam-warning">
+        <div class="warning-title">⚠️ <span id="warning-title-text">Ошибка</span></div>
+        <p class="warning-text" id="warning-text">Текст ошибки</p>
+      </div>
+
+      <label class="checkbox-group">
+        <input type="checkbox" id="exclude-duplicates">
+        <span class="checkbox-label">
+          Исключить игры, которые у меня уже есть
+          <small>Рекомендуется — профиль должен быть открытым</small>
+        </span>
+      </label>
+
+      <button class="btn btn-primary" id="btn-check-steam" disabled>
+        Проверить и продолжить →
+      </button>
+      <button class="btn btn-secondary" id="btn-back-start">← Назад</button>
+    </div>
+
+    <!-- ШАГ 3: Рулетка -->
+    <div class="step" id="step-roulette">
+      <h2 class="title" style="font-size: 22px;">🎰 Крути рулетку!</h2>
+      <p class="subtitle">Нажми кнопку и узнай свою игру</p>
+
+      <div class="roulette-section">
+        <div class="roulette-wrapper">
+          <div class="roulette-pointer"></div>
+          <div class="roulette-track">
+            <div class="roulette-strip" id="roulette-strip"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-gold" id="btn-spin">🎰 Крутить рулетку!</button>
+    </div>
+
+    <!-- ШАГ 4: Результат -->
+    <div class="step" id="step-result">
+      
+      <!-- Ожидание ключа -->
+      <div class="result-waiting" id="result-waiting">
+        <div class="waiting-icon">🎁</div>
+        <h2 class="waiting-title">Игра выбрана!</h2>
+        <p class="waiting-text">
+          Администратор подбирает для тебя идеальную игру.<br>
+          Обычно это занимает несколько минут.<br><br>
+          <strong>Обнови страницу</strong> через пару минут.
+        </p>
+        <button class="btn btn-secondary" onclick="location.reload()">🔄 Обновить страницу</button>
+      </div>
+
+      <!-- Ключ назначен -->
+      <div class="result-assigned" id="result-assigned" style="display: none;">
+        <h2 class="title" style="font-size: 22px;">🎉 Поздравляем!</h2>
+        <img src="" alt="Game" class="game-cover" id="result-game-img">
+        <h3 class="game-name" id="result-game-name">Название игры</h3>
+        
+        <div class="key-container" id="key-container" onclick="copyKey()">
+          <div class="key-label">Твой ключ Steam</div>
+          <div class="key-value" id="result-key">XXXXX-XXXXX-XXXXX</div>
+          <span class="key-copied" id="key-copied">Скопировано!</span>
+          <p class="key-hint">Нажми чтобы скопировать</p>
+        </div>
+
+        <a href="https://store.steampowered.com/account/registerkey" target="_blank" class="btn btn-success">
+          Активировать в Steam →
+        </a>
+
+        <div class="post-options" id="post-options">
+          <p class="post-options-title">Не понравилась игра?</p>
+          <button class="btn btn-secondary" id="btn-respin">🔄 Перекрутить (<span id="respin-price">99 ₽</span>)</button>
+          <button class="btn btn-gold" id="btn-respin-premium">⭐ Премиум перекрутка (<span id="premium-price">199 ₽</span>)</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Уже прокручено / Ошибка -->
+    <div class="step" id="step-error">
+      <div style="text-align: center; padding: 40px 0;">
+        <div style="font-size: 60px; margin-bottom: 20px;">❌</div>
+        <h2 class="title" style="font-size: 22px;">Упс!</h2>
+        <p class="subtitle" id="error-text">Эта ссылка недействительна или уже использована.</p>
+      </div>
+    </div>
+
+  </div>
+  
+  <div class="footer">
+    © 2024 GameRoulette • <a href="/refund">Возврат</a> • <a href="/privacy">Политика</a>
+  </div>
+</div>
+
+<div class="confetti-container" id="confetti-container"></div>
+
+<script>
+// === ПЕРЕМЕННЫЕ ===
+let linkCode = '';
+let linkData = null;
+let selectedBoost = 'free';
+let steamData = null;
+
+// Цены по тирам
+const TIER_PRICES = {
+  starter: { boost: 45, respin: 45, premium: 90 },
+  bronze: { boost: 135, respin: 135, premium: 270 },
+  silver: { boost: 210, respin: 210, premium: 420 },
+  gold: { boost: 300, respin: 300, premium: 600 },
+  diamond: { boost: 450, respin: 450, premium: 900 }
+};
+
+const TIER_NAMES = {
+  starter: '⚪ Starter',
+  bronze: '🥉 Bronze', 
+  silver: '🥈 Silver',
+  gold: '🥇 Gold',
+  diamond: '💎 Diamond'
+};
+
+// Примеры игр для рулетки (заглушки)
+const SAMPLE_GAMES = [
+  { name: 'Counter-Strike 2', appId: '730' },
+  { name: 'Dota 2', appId: '570' },
+  { name: 'PUBG', appId: '578080' },
+  { name: 'Rust', appId: '252490' },
+  { name: 'GTA V', appId: '271590' },
+  { name: 'Elden Ring', appId: '1245620' },
+  { name: 'Cyberpunk 2077', appId: '1091500' },
+  { name: 'Red Dead 2', appId: '1174180' },
+  { name: 'Hogwarts Legacy', appId: '990080' },
+  { name: 'Baldur\'s Gate 3', appId: '1086940' }
+];
+
+// === ИНИЦИАЛИЗАЦИЯ ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Получаем код из URL
+  const path = window.location.pathname;
+  const match = path.match(/\/g\/([^\/]+)/);
+  if (match) {
+    linkCode = match[1];
+    loadLinkData();
+  } else {
+    showStep('step-error');
+    document.getElementById('error-text').textContent = 'Некорректная ссылка';
+  }
+});
+
+// === ЗАГРУЗКА ДАННЫХ ССЫЛКИ ===
+async function loadLinkData() {
+  try {
+    const resp = await fetch(`/games/api/link/${linkCode}`);
+    const data = await resp.json();
+    
+    if (!data.valid) {
+      showStep('step-error');
+      document.getElementById('error-text').textContent = data.error || 'Ссылка недействительна';
+      return;
+    }
+
+    linkData = data;
+    
+    // Обновляем UI
+    updateTierBadge(data.tier);
+    updatePrices(data.tier);
+    
+    // Проверяем состояние
+    if (data.spinCompleted) {
+      if (data.keyAssigned) {
+        showResult(data);
+      } else {
+        showStep('step-result');
+        document.getElementById('result-waiting').style.display = 'block';
+        document.getElementById('result-assigned').style.display = 'none';
+      }
+    } else {
+      showStep('step-start');
+    }
+    
+  } catch (e) {
+    console.error(e);
+    showStep('step-error');
+    document.getElementById('error-text').textContent = 'Ошибка загрузки данных';
+  }
+}
+
+// === ОБНОВЛЕНИЕ TIER BADGE ===
+function updateTierBadge(tier) {
+  const badge = document.getElementById('tier-badge');
+  badge.className = `tier-badge tier-${tier}`;
+  badge.textContent = TIER_NAMES[tier] || tier;
+}
+
+// === ОБНОВЛЕНИЕ ЦЕН ===
+function updatePrices(tier) {
+  const prices = TIER_PRICES[tier] || TIER_PRICES.starter;
+  document.getElementById('boost-price').textContent = `+${prices.boost} ₽`;
+  document.getElementById('respin-price').textContent = `${prices.respin} ₽`;
+  document.getElementById('premium-price').textContent = `${prices.premium} ₽`;
+}
+
+// === ПОКАЗ ШАГА ===
+function showStep(stepId) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(stepId)?.classList.add('active');
+}
+
+// === ВЫБОР БУСТА ===
+document.querySelectorAll('.choice').forEach(choice => {
+  choice.addEventListener('click', () => {
+    document.querySelectorAll('.choice').forEach(c => c.classList.remove('selected'));
+    choice.classList.add('selected');
+    selectedBoost = choice.dataset.boost;
+  });
+});
+
+// По умолчанию выбран бесплатный
+document.querySelector('.choice[data-boost="free"]')?.classList.add('selected');
+
+// === КНОПКА "ПРОДОЛЖИТЬ" ===
+document.getElementById('btn-to-steam').addEventListener('click', async () => {
+  if (selectedBoost === 'paid') {
+    // Оплата буста
+    const btn = document.getElementById('btn-to-steam');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loader"></span>Переход к оплате...';
+    
+    try {
+      const resp = await fetch('/games/api/create-boost-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: linkCode })
+      });
+      const data = await resp.json();
+      
+      if (data.ok && data.payment_url) {
+        window.location.href = data.payment_url;
+      } else {
+        alert(data.error || 'Ошибка создания платежа');
+        btn.disabled = false;
+        btn.textContent = 'Продолжить →';
+      }
+    } catch (e) {
+      alert('Ошибка соединения');
+      btn.disabled = false;
+      btn.textContent = 'Продолжить →';
+    }
+  } else {
+    showStep('step-steam');
+  }
+});
+
+// === КНОПКА "НАЗАД" ===
+document.getElementById('btn-back-start').addEventListener('click', () => {
+  showStep('step-start');
+});
+
+// === ВВОД STEAM URL ===
+const steamInput = document.getElementById('steam-url');
+const btnCheckSteam = document.getElementById('btn-check-steam');
+
+steamInput.addEventListener('input', () => {
+  btnCheckSteam.disabled = steamInput.value.length < 10;
+  document.getElementById('steam-preview').classList.remove('visible');
+  document.getElementById('steam-warning').classList.remove('visible');
+});
+
+// === ПРОВЕРКА STEAM ===
+btnCheckSteam.addEventListener('click', async () => {
+  const url = steamInput.value.trim();
+  if (!url) return;
+  
+  btnCheckSteam.disabled = true;
+  btnCheckSteam.innerHTML = '<span class="loader"></span>Проверка...';
+  
+  try {
+    const resp = await fetch('/games/api/check-steam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ steamUrl: url })
+    });
+    const data = await resp.json();
+    
+    if (data.ok) {
+      steamData = data;
+      document.getElementById('steam-avatar').src = data.steamAvatar;
+      document.getElementById('steam-name').textContent = data.steamName;
+      document.getElementById('steam-id').textContent = `ID: ${data.steamId}`;
+      document.getElementById('steam-preview').classList.add('visible');
+      document.getElementById('steam-warning').classList.remove('visible');
+      
+      btnCheckSteam.textContent = 'Продолжить к рулетке →';
+      btnCheckSteam.disabled = false;
+      btnCheckSteam.onclick = startRoulette;
+    } else {
+      document.getElementById('steam-preview').classList.remove('visible');
+      document.getElementById('warning-title-text').textContent = 'Ошибка';
+      document.getElementById('warning-text').textContent = data.error;
+      document.getElementById('steam-warning').classList.add('visible');
+      
+      btnCheckSteam.textContent = 'Проверить и продолжить →';
+      btnCheckSteam.disabled = false;
+    }
+  } catch (e) {
+    alert('Ошибка соединения');
+    btnCheckSteam.textContent = 'Проверить и продолжить →';
+    btnCheckSteam.disabled = false;
+  }
+});
+
+// === ЗАПУСК РУЛЕТКИ ===
+function startRoulette() {
+  showStep('step-roulette');
+  initRouletteStrip();
+}
+
+// === ИНИЦИАЛИЗАЦИЯ ЛЕНТЫ РУЛЕТКИ ===
+function initRouletteStrip() {
+  const strip = document.getElementById('roulette-strip');
+  strip.innerHTML = '';
+  
+  // Создаём 50 элементов
+  for (let i = 0; i < 50; i++) {
+    const item = document.createElement('div');
+    
+    if (i % 7 === 0) {
+      // Мистери элемент
+      item.className = 'roulette-item mystery';
+      item.innerHTML = `
+        <span class="mystery-icon">❓</span>
+        <span class="item-name">Твоя игра</span>
+      `;
+    } else {
+      const game = SAMPLE_GAMES[i % SAMPLE_GAMES.length];
+      item.className = 'roulette-item';
+      item.innerHTML = `
+        <img src="https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appId}/header.jpg" alt="${game.name}" onerror="this.src='https://via.placeholder.com/90x42?text=Game'">
+        <span class="item-name">${game.name}</span>
+      `;
+    }
+    
+    strip.appendChild(item);
+  }
+  
+  strip.style.transform = 'translateX(0)';
+}
+
+// === КНОПКА КРУТИТЬ ===
+document.getElementById('btn-spin').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-spin');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>Крутим...';
+  
+  // Отправляем запрос на сервер
+  try {
+    const resp = await fetch('/games/api/spin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: linkCode,
+        steamProfileUrl: steamInput.value,
+        steamId: steamData?.steamId,
+        steamName: steamData?.steamName,
+        steamAvatar: steamData?.steamAvatar,
+        excludeDuplicates: document.getElementById('exclude-duplicates').checked
+      })
+    });
+    const data = await resp.json();
+    
+    if (!data.ok) {
+      alert(data.error || 'Ошибка');
+      btn.disabled = false;
+      btn.textContent = '🎰 Крутить рулетку!';
+      return;
+    }
+    
+    // Запускаем анимацию
+    spinAnimation();
+    
+  } catch (e) {
+    alert('Ошибка соединения');
+    btn.disabled = false;
+    btn.textContent = '🎰 Крутить рулетку!';
+  }
+});
+
+// === АНИМАЦИЯ РУЛЕТКИ ===
+function spinAnimation() {
+  const strip = document.getElementById('roulette-strip');
+  const itemWidth = 110;
+  const totalItems = 50;
+  
+  // Останавливаемся на случайном mystery элементе
+  const mysteryIndexes = [0, 7, 14, 21, 28, 35, 42, 49];
+  const targetIndex = mysteryIndexes[Math.floor(Math.random() * mysteryIndexes.length) + 3] || 28;
+  
+  // Центрируем
+  const trackWidth = document.querySelector('.roulette-track').offsetWidth;
+  const offset = (targetIndex * itemWidth) - (trackWidth / 2) + (itemWidth / 2);
+  
+  strip.style.transition = 'transform 5s cubic-bezier(0.15, 0.85, 0.35, 1)';
+  strip.style.transform = `translateX(-${offset}px)`;
+  
+  // После анимации
+  setTimeout(() => {
+    // Подсвечиваем победителя
+    const items = strip.querySelectorAll('.roulette-item');
+    items[targetIndex]?.classList.add('winner');
+    
+    // Конфетти
+    createConfetti();
+    
+    // Показываем результат
+    setTimeout(() => {
+      showStep('step-result');
+      document.getElementById('result-waiting').style.display = 'block';
+      document.getElementById('result-assigned').style.display = 'none';
+    }, 1500);
+    
+  }, 5000);
+}
+
+// === КОНФЕТТИ ===
+function createConfetti() {
+  const container = document.getElementById('confetti-container');
+  const colors = ['#7c3aed', '#fbbf24', '#10b981', '#ef4444', '#3b82f6', '#ec4899'];
+  
+  for (let i = 0; i < 100; i++) {
+    setTimeout(() => {
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti';
+      confetti.style.left = Math.random() * 100 + '%';
+      confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+      confetti.style.width = (Math.random() * 8 + 5) + 'px';
+      confetti.style.height = confetti.style.width;
+      confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+      container.appendChild(confetti);
+      
+      setTimeout(() => confetti.remove(), 4000);
+    }, i * 30);
+  }
+}
+
+// === ПОКАЗ РЕЗУЛЬТАТА ===
+function showResult(data) {
+  showStep('step-result');
+  document.getElementById('result-waiting').style.display = 'none';
+  document.getElementById('result-assigned').style.display = 'block';
+  
+  const gameImg = document.getElementById('result-game-img');
+  if (data.steamAppId) {
+    gameImg.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${data.steamAppId}/header.jpg`;
+  } else {
+    gameImg.src = 'https://via.placeholder.com/300x140?text=Game';
+  }
+  
+  document.getElementById('result-game-name').textContent = data.gameName || 'Игра';
+  document.getElementById('result-key').textContent = data.gameKey || 'XXXXX-XXXXX-XXXXX';
+  
+  // Конфетти при первом показе
+  setTimeout(createConfetti, 500);
+}
+
+// === КОПИРОВАНИЕ КЛЮЧА ===
+function copyKey() {
+  const key = document.getElementById('result-key').textContent;
+  navigator.clipboard.writeText(key).then(() => {
+    const copied = document.getElementById('key-copied');
+    copied.classList.add('visible');
+    setTimeout(() => copied.classList.remove('visible'), 2000);
+  });
+}
+
+// === ПЕРЕКРУТКА ===
+document.getElementById('btn-respin')?.addEventListener('click', () => createRespinPayment('normal'));
+document.getElementById('btn-respin-premium')?.addEventListener('click', () => createRespinPayment('premium'));
+
+async function createRespinPayment(type) {
+  const btn = document.getElementById(type === 'premium' ? 'btn-respin-premium' : 'btn-respin');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>...';
+  
+  try {
+    const resp = await fetch('/games/api/create-respin-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: linkCode, type })
+    });
+    const data = await resp.json();
+    
+    if (data.ok && data.payment_url) {
+      window.location.href = data.payment_url;
+    } else {
+      alert(data.error || 'Ошибка');
+      location.reload();
+    }
+  } catch (e) {
+    alert('Ошибка соединения');
+    location.reload();
+  }
+}
+
+// === ПРОВЕРКА ПАРАМЕТРОВ URL (после оплаты) ===
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('boost_success') === '1') {
+  // Буст оплачен — показываем шаг steam
+  setTimeout(() => showStep('step-steam'), 500);
+}
+if (urlParams.get('respin_success') === '1') {
+  // Перекрутка оплачена — перезагружаем
+  alert('Оплата принята! Ожидайте новую игру.');
+  window.location.href = window.location.pathname;
+}
+</script>
+
+</body>
+</html>

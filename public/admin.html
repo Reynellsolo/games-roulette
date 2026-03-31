@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 Админка — Игры</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-dark: #0d0d1a;
+  --bg-card: #14142a;
+  --bg-input: #1a1a35;
+  --border: #2a2a4a;
+  --accent: #7c3aed;
+  --accent-light: #a78bfa;
+  --accent-glow: rgba(124, 58, 237, 0.4);
+  --gold: #fbbf24;
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --text: #e2e8f0;
+  --text-muted: #64748b;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* === HEADER === */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-light), var(--gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 20px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent-light);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* === AUTH === */
+.auth-section {
+  max-width: 400px;
+  margin: 100px auto;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 30px;
+  margin-bottom: 24px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-title span { font-size: 24px; }
+
+/* === FORMS === */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.form-group input::placeholder { color: var(--text-muted); }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* === BUTTONS === */
+.btn {
+  padding: 14px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #9333ea);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--accent-glow);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, var(--success), #059669);
+  color: white;
+}
+
+.btn-danger {
+  background: var(--bg-input);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.btn-danger:hover { background: rgba(239, 68, 68, 0.1); }
+
+.btn-sm {
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+.btn-full { width: 100%; }
+
+/* === GRID === */
+.grid {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+/* === TABS === */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.tab {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.tab:hover { color: var(--text); background: var(--bg-input); }
+.tab.active { color: var(--accent-light); background: var(--bg-input); }
+
+/* === TABLE === */
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: var(--bg-input);
+}
+
+td {
+  font-size: 13px;
+}
+
+tr:hover { background: rgba(124, 58, 237, 0.05); }
+
+/* === BADGES === */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-starter { background: #374151; color: #9ca3af; }
+.badge-bronze { background: #92400e; color: #fbbf24; }
+.badge-silver { background: #374151; color: #e2e8f0; }
+.badge-gold { background: #854d0e; color: #fde047; }
+.badge-diamond { background: #4c1d95; color: #c4b5fd; }
+
+.badge-waiting { background: var(--warning); color: #000; }
+.badge-done { background: var(--success); color: #fff; }
+.badge-unused { background: var(--border); color: var(--text-muted); }
+
+/* === STATUS DOTS === */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.status-dot.waiting { background: var(--warning); animation: pulse-dot 1.5s infinite; }
+.status-dot.done { background: var(--success); }
+.status-dot.unused { background: var(--text-muted); }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+/* === LINK ROW DETAILS === */
+.link-code {
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  background: var(--bg-input);
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.link-code:hover { background: var(--accent); color: white; }
+
+.steam-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.steam-mini img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.steam-mini span {
+  font-size: 12px;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* === MODAL === */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 30px;
+  width: 90%;
+  max-width: 500px;
+  transform: scale(0.9);
+  transition: transform 0.3s;
+}
+
+.modal-overlay.active .modal { transform: scale(1); }
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.modal-actions .btn { flex: 1; }
+
+/* === EMPTY STATE === */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.empty-icon { font-size: 60px; margin-bottom: 16px; opacity: 0.5; }
+.empty-text { font-size: 16px; }
+
+/* === TOAST === */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: var(--success);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 2000;
+}
+
+.toast.visible { transform: translateY(0); opacity: 1; }
+.toast.error { background: var(--error); }
+
+/* === LINK PREVIEW === */
+.link-preview {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 16px;
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  word-break: break-all;
+  display: none;
+}
+
+.link-preview.visible { display: block; }
+
+/* === FILTERS === */
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.filter-btn:hover { border-color: var(--accent); color: var(--text); }
+.filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+/* === DETAILS PANEL === */
+.details-panel {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 16px;
+}
+
+.details-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.details-row:last-child { border-bottom: none; }
+.details-label { color: var(--text-muted); }
+.details-value { font-weight: 600; }
+
+/* === LOADER === */
+.loader {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.page-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div class="auth-section" id="auth-section">
+  <div class="card">
+    <h2 class="card-title"><span>🔐</span> Вход в админку</h2>
+    <div class="form-group">
+      <label>Секретный ключ</label>
+      <input type="password" id="auth-key" placeholder="Введите ключ...">
+    </div>
+    <button class="btn btn-primary btn-full" id="btn-auth">Войти</button>
+  </div>
+</div>
+
+<!-- MAIN PANEL -->
+<div class="container" id="main-panel" style="display: none;">
+  
+  <div class="header">
+    <h1>🎮 Game Roulette</h1>
+    <div class="header-stats">
+      <div class="stat-box">
+        <div class="stat-value" id="stat-waiting">0</div>
+        <div class="stat-label">Ожидают ключ</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-label">Всего</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    
+    <!-- LEFT COLUMN -->
+    <div>
+      <!-- Generate Links -->
+      <div class="card">
+        <h3 class="card-title"><span>🔗</span> Генерация ссылок</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Количество</label>
+            <input type="number" id="gen-count" value="1" min="1" max="100">
+          </div>
+          <div class="form-group">
+            <label>Тир</label>
+            <select id="gen-tier">
+              <option value="starter">Starter ⚪</option>
+              <option value="bronze">Bronze 🥉</option>
+              <option value="silver">Silver 🥈</option>
+              <option value="gold">Gold 🥇</option>
+              <option value="diamond">Diamond 💎</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Заметка (опционально)</label>
+          <input type="text" id="gen-note" placeholder="Ozon заказ #123...">
+        </div>
+        <button class="btn btn-primary btn-full" id="btn-generate">
+          ✨ Сгенерировать
+        </button>
+        <div class="link-preview" id="generated-links"></div>
+      </div>
+
+      <!-- Tier Stats -->
+      <div class="card">
+        <h3 class="card-title"><span>📊</span> Свободные ссылки</h3>
+        <div id="tier-stats">
+          <div class="details-panel">
+            <div class="details-row">
+              <span class="details-label">⚪ Starter</span>
+              <span class="details-value" id="tier-starter">0</span>
+            </div>
+            <div class="details-row">
+              <span class="details-label">🥉 Bronze</span>
+              <span class="details-value" id="tier-bronze">0</span>
+            </div>
+            <div class="details-row">
+              <span class="details-label">🥈 Silver</span>
+              <span class="details-value" id="tier-silver">0</span>
+            </div>
+            <div class="details-row">
+              <span class="details-label">🥇 Gold</span>
+              <span class="details-value" id="tier-gold">0</span>
+            </div>
+            <div class="details-row">
+              <span class="details-label">💎 Diamond</span>
+              <span class="details-value" id="tier-diamond">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <div class="card">
+        <h3 class="card-title"><span>📋</span> Все ссылки</h3>
+        
+        <div class="filters">
+          <button class="filter-btn active" data-filter="all">Все</button>
+          <button class="filter-btn" data-filter="waiting">⏳ Ожидают ключ</button>
+          <button class="filter-btn" data-filter="done">✅ Выданы</button>
+          <button class="filter-btn" data-filter="unused">⚪ Не использованы</button>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Код</th>
+                <th>Тир</th>
+                <th>Статус</th>
+                <th>Steam</th>
+                <th>Игра</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="links-table">
+              <tr>
+                <td colspan="6">
+                  <div class="page-loader"><span class="loader"></span></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ASSIGN KEY MODAL -->
+<div class="modal-overlay" id="modal-assign">
+  <div class="modal">
+    <h3 class="modal-title"><span>🎮</span> Назначить ключ</h3>
+    
+    <div id="assign-steam-info" style="margin-bottom: 20px;"></div>
+    
+    <div class="form-group">
+      <label>Название игры</label>
+      <input type="text" id="assign-game-name" placeholder="Elden Ring">
+    </div>
+    <div class="form-group">
+      <label>Ключ Steam</label>
+      <input type="text" id="assign-game-key" placeholder="XXXXX-XXXXX-XXXXX">
+    </div>
+    <div class="form-group">
+      <label>Steam App ID (для обложки)</label>
+      <input type="text" id="assign-steam-appid" placeholder="1245620">
+    </div>
+    
+    <input type="hidden" id="assign-code">
+    
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="closeModal('modal-assign')">Отмена</button>
+      <button class="btn btn-success" id="btn-assign-submit">✓ Назначить</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">Сохранено!</div>
+
+<script>
+// === ПЕРЕМЕННЫЕ ===
+let adminSecret = localStorage.getItem('adminSecret') || '';
+let allLinks = [];
+let currentFilter = 'all';
+
+// === INIT ===
+document.addEventListener('DOMContentLoaded', () => {
+  if (adminSecret) {
+    checkAuth();
+  }
+});
+
+// === AUTH ===
+document.getElementById('btn-auth').addEventListener('click', () => {
+  adminSecret = document.getElementById('auth-key').value.trim();
+  if (!adminSecret) return;
+  checkAuth();
+});
+
+document.getElementById('auth-key').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') document.getElementById('btn-auth').click();
+});
+
+async function checkAuth() {
+  try {
+    const resp = await fetch('/games/api/admin/links', {
+      headers: { 'x-admin-secret': adminSecret }
+    });
+    
+    if (resp.status === 403) {
+      showToast('Неверный ключ', true);
+      adminSecret = '';
+      localStorage.removeItem('adminSecret');
+      return;
+    }
+    
+    localStorage.setItem('adminSecret', adminSecret);
+    document.getElementById('auth-section').style.display = 'none';
+    document.getElementById('main-panel').style.display = 'block';
+    loadLinks();
+    
+  } catch (e) {
+    showToast('Ошибка соединения', true);
+  }
+}
+
+// === LOAD LINKS ===
+async function loadLinks() {
+  try {
+    const resp = await fetch('/games/api/admin/links', {
+      headers: { 'x-admin-secret': adminSecret }
+    });
+    const data = await resp.json();
+    
+    if (data.ok) {
+      allLinks = data.links;
+      updateStats(data.stats);
+      renderLinks();
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// === UPDATE STATS ===
+function updateStats(stats) {
+  document.getElementById('stat-waiting').textContent = stats.waiting;
+  document.getElementById('stat-total').textContent = stats.total;
+  
+  document.getElementById('tier-starter').textContent = stats.byTier.starter;
+  document.getElementById('tier-bronze').textContent = stats.byTier.bronze;
+  document.getElementById('tier-silver').textContent = stats.byTier.silver;
+  document.getElementById('tier-gold').textContent = stats.byTier.gold;
+  document.getElementById('tier-diamond').textContent = stats.byTier.diamond;
+}
+
+// === RENDER LINKS ===
+function renderLinks() {
+  const tbody = document.getElementById('links-table');
+  
+  let filtered = allLinks;
+  if (currentFilter === 'waiting') {
+    filtered = allLinks.filter(l => l.spinCompleted && !l.keyAssigned);
+  } else if (currentFilter === 'done') {
+    filtered = allLinks.filter(l => l.keyAssigned);
+  } else if (currentFilter === 'unused') {
+    filtered = allLinks.filter(l => !l.spinCompleted);
+  }
+  
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty">
+            <div class="empty-icon">📭</div>
+            <div class="empty-text">Нет ссылок</div>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  tbody.innerHTML = filtered.map(link => {
+    let status = '';
+    let statusClass = '';
+    
+    if (link.keyAssigned) {
+      status = '<span class="badge badge-done">Выдан</span>';
+      statusClass = 'done';
+    } else if (link.spinCompleted) {
+      status = '<span class="badge badge-waiting">Ожидает</span>';
+      statusClass = 'waiting';
+    } else {
+      status = '<span class="badge badge-unused">Не использован</span>';
+      statusClass = 'unused';
+    }
+    
+    const steamInfo = link.steamName ? `
+      <div class="steam-mini">
+        <img src="${link.steamAvatar || ''}" onerror="this.style.display='none'">
+        <span>${link.steamName}</span>
+      </div>
+    ` : '—';
+    
+    const gameInfo = link.gameName || '—';
+    
+    let actions = '';
+    if (link.spinCompleted && !link.keyAssigned) {
+      actions = `<button class="btn btn-success btn-sm" onclick="openAssignModal('${link.code}')">🎮 Назначить</button>`;
+    } else if (!link.spinCompleted) {
+      actions = `<button class="btn btn-danger btn-sm" onclick="deleteLink('${link.code}')">🗑️</button>`;
+    } else {
+      actions = `<span style="color: var(--success);">✓</span>`;
+    }
+    
+    return `
+      <tr>
+        <td>
+          <span class="link-code" onclick="copyLink('${link.code}')" title="Нажмите чтобы скопировать">${link.code}</span>
+        </td>
+        <td><span class="badge badge-${link.tier}">${link.tier}</span></td>
+        <td><span class="status-dot ${statusClass}"></span>${status}</td>
+        <td>${steamInfo}</td>
+        <td>${gameInfo}</td>
+        <td>${actions}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// === FILTERS ===
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderLinks();
+  });
+});
+
+// === GENERATE LINKS ===
+document.getElementById('btn-generate').addEventListener('click', async () => {
+  const count = parseInt(document.getElementById('gen-count').value) || 1;
+  const tier = document.getElementById('gen-tier').value;
+  const note = document.getElementById('gen-note').value;
+  
+  const btn = document.getElementById('btn-generate');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span> Генерация...';
+  
+  try {
+    const resp = await fetch('/games/api/admin/generate-links', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-secret': adminSecret
+      },
+      body: JSON.stringify({ count, tier, note })
+    });
+    const data = await resp.json();
+    
+    if (data.ok) {
+      const linksHtml = data.links.map(l => l.url).join('\n');
+      document.getElementById('generated-links').textContent = linksHtml;
+      document.getElementById('generated-links').classList.add('visible');
+      showToast(`Создано ${data.links.length} ссылок`);
+      loadLinks();
+    } else {
+      showToast(data.error || 'Ошибка', true);
+    }
+  } catch (e) {
+    showToast('Ошибка соединения', true);
+  }
+  
+  btn.disabled = false;
+  btn.innerHTML = '✨ Сгенерировать';
+});
+
+// === COPY LINK ===
+function copyLink(code) {
+  const url = `${window.location.origin}/games/g/${code}`;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Ссылка скопирована');
+  });
+}
+
+// === DELETE LINK ===
+async function deleteLink(code) {
+  if (!confirm('Удалить эту ссылку?')) return;
+  
+  try {
+    await fetch(`/games/api/admin/link/${code}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-secret': adminSecret }
+    });
+    showToast('Удалено');
+    loadLinks();
+  } catch (e) {
+    showToast('Ошибка', true);
+  }
+}
+
+// === ASSIGN MODAL ===
+function openAssignModal(code) {
+  const link = allLinks.find(l => l.code === code);
+  if (!link) return;
+  
+  document.getElementById('assign-code').value = code;
+  document.getElementById('assign-game-name').value = '';
+  document.getElementById('assign-game-key').value = '';
+  document.getElementById('assign-steam-appid').value = '';
+  
+  // Show steam info
+  let steamHtml = '';
+  if (link.steamName) {
+    steamHtml = `
+      <div class="details-panel">
+        <div class="details-row">
+          <span class="details-label">Steam</span>
+          <span class="details-value">${link.steamName}</span>
+        </div>
+        ${link.excludeDuplicates ? `
+        <div class="details-row">
+          <span class="details-label">Исключить дубли</span>
+          <span class="details-value" style="color: var(--success);">✓ Да</span>
+        </div>
+        ` : ''}
+        ${link.boosted ? `
+        <div class="details-row">
+          <span class="details-label">Буст оплачен</span>
+          <span class="details-value" style="color: var(--gold);">💰 Да</span>
+        </div>
+        ` : ''}
+      </div>
+    `;
+  }
+  document.getElementById('assign-steam-info').innerHTML = steamHtml;
+  
+  document.getElementById('modal-assign').classList.add('active');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.classList.remove('active');
+    }
+  });
+});
+
+// === ASSIGN KEY SUBMIT ===
+document.getElementById('btn-assign-submit').addEventListener('click', async () => {
+  const code = document.getElementById('assign-code').value;
+  const gameName = document.getElementById('assign-game-name').value.trim();
+  const gameKey = document.getElementById('assign-game-key').value.trim();
+  const steamAppId = document.getElementById('assign-steam-appid').value.trim();
+  
+  if (!gameName || !gameKey) {
+    showToast('Заполните название и ключ', true);
+    return;
+  }
+  
+  const btn = document.getElementById('btn-assign-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>';
+  
+  try {
+    const resp = await fetch('/games/api/admin/assign-key', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-secret': adminSecret
+      },
+      body: JSON.stringify({ code, gameName, gameKey, steamAppId })
+    });
+    const data = await resp.json();
+    
+    if (data.ok) {
+      showToast('Ключ назначен!');
+      closeModal('modal-assign');
+      loadLinks();
+    } else {
+      showToast(data.error || 'Ошибка', true);
+    }
+  } catch (e) {
+    showToast('Ошибка соединения', true);
+  }
+  
+  btn.disabled = false;
+  btn.innerHTML = '✓ Назначить';
+});
+
+// === TOAST ===
+function showToast(message, isError = false) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast' + (isError ? ' error' : '');
+  toast.classList.add('visible');
+  
+  setTimeout(() => {
+    toast.classList.remove('visible');
+  }, 3000);
+}
+
+// === AUTO REFRESH ===
+setInterval(() => {
+  if (document.getElementById('main-panel').style.display !== 'none') {
+    loadLinks();
+  }
+}, 30000); // каждые 30 сек
+</script>
+
+</body>
+</html>
