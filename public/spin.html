@@ -187,7 +187,8 @@ body {
   letter-spacing: 0.5px;
 }
 
-.input-group input {
+.input-group input,
+.input-group select {
   width: 100%;
   padding: 16px 20px;
   background: var(--bg-input);
@@ -199,7 +200,8 @@ body {
   outline: none;
 }
 
-.input-group input:focus {
+.input-group input:focus,
+.input-group select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 20px var(--accent-glow);
 }
@@ -362,7 +364,7 @@ body {
 }
 
 .roulette-track {
-  height: 140px;
+  height: 170px;
   overflow: hidden;
   position: relative;
 }
@@ -377,8 +379,8 @@ body {
 }
 
 .roulette-item {
-  width: 110px;
-  height: 140px;
+  width: 160px;
+  height: 170px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -391,8 +393,8 @@ body {
 }
 
 .roulette-item img {
-  width: 90px;
-  height: 42px;
+  width: 140px;
+  height: 65px;
   object-fit: cover;
   border-radius: 8px;
   margin-bottom: 8px;
@@ -400,13 +402,13 @@ body {
 }
 
 .roulette-item .item-name {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-muted);
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100px;
+  max-width: 150px;
 }
 
 .roulette-item.mystery {
@@ -641,26 +643,24 @@ a:hover { text-decoration: underline; }
         <span class="logo-icon">🎰</span>
       </div>
       <h1 class="title">Случайная игра</h1>
-      <p class="subtitle">Испытай удачу и получи игру для Steam</p>
+      <p class="subtitle">Выбери режим выдачи игры</p>
       
       <div style="text-align: center;">
         <span class="tier-badge tier-starter" id="tier-badge">⏳ Загрузка...</span>
       </div>
 
       <div class="choices" id="boost-choices">
-        <div class="choice" data-boost="free">
+        <div class="choice" data-mode="exclude">
           <div class="choice-header">
-            <span class="choice-title">🎲 Обычный шанс</span>
-            <span class="choice-price choice-free">Бесплатно</span>
+            <span class="choice-title">✅ Исключить повторные игры</span>
           </div>
-          <p class="choice-desc">Стандартные шансы на все игры в пуле</p>
+          <p class="choice-desc">Проверим Steam-профиль и исключим игры, которые уже есть</p>
         </div>
-        <div class="choice" data-boost="paid">
+        <div class="choice" data-mode="normal">
           <div class="choice-header">
-            <span class="choice-title">🚀 Повышенный шанс</span>
-            <span class="choice-price" id="boost-price">+99 ₽</span>
+            <span class="choice-title">🎲 Без исключения повторов</span>
           </div>
-          <p class="choice-desc">Увеличенный шанс получить дорогую игру из пула</p>
+          <p class="choice-desc">Сразу крутить рулетку без проверки Steam</p>
         </div>
       </div>
 
@@ -670,7 +670,7 @@ a:hover { text-decoration: underline; }
     <!-- ШАГ 2: Steam профиль -->
     <div class="step" id="step-steam">
       <h2 class="title" style="font-size: 22px;">🔗 Твой Steam</h2>
-      <p class="subtitle">Введи ссылку на профиль для проверки</p>
+      <p class="subtitle">Проверка Steam нужна только если хочешь исключить дубли</p>
 
       <div class="input-group">
         <label>Ссылка на профиль Steam</label>
@@ -691,16 +691,24 @@ a:hover { text-decoration: underline; }
         <p class="warning-text" id="warning-text">Текст ошибки</p>
       </div>
 
-      <label class="checkbox-group">
-        <input type="checkbox" id="exclude-duplicates">
-        <span class="checkbox-label">
-          Исключить игры, которые у меня уже есть
-          <small>Рекомендуется — профиль должен быть открытым</small>
-        </span>
-      </label>
+      <div class="input-group">
+        <label>Страна магазина</label>
+        <select id="countrySelect">
+          <option value="">Выбери страну</option>
+          <option value="Россия">Россия</option>
+          <option value="Казахстан">Казахстан</option>
+          <option value="Украина">Украина</option>
+          <option value="Беларусь">Беларусь</option>
+          <option value="Турция">Турция</option>
+          <option value="Аргентина">Аргентина</option>
+          <option value="США">США</option>
+          <option value="Европа">Европа</option>
+          <option value="Другая">Другая</option>
+        </select>
+      </div>
 
-      <button class="btn btn-primary" id="btn-check-steam" disabled>
-        Проверить и продолжить →
+      <button class="btn btn-primary" id="btn-check-steam">
+        Продолжить к рулетке →
       </button>
       <button class="btn btn-secondary" id="btn-back-start">← Назад</button>
     </div>
@@ -730,9 +738,9 @@ a:hover { text-decoration: underline; }
         <div class="waiting-icon">🎁</div>
         <h2 class="waiting-title">Игра выбрана!</h2>
         <p class="waiting-text">
-          Администратор подбирает для тебя идеальную игру.<br>
+          Бот автоматически исключает повторы и формирует заказ.<br>
           Обычно это занимает несколько минут.<br><br>
-          <strong>Обнови страницу</strong> через пару минут.
+          <strong>Страница обновится сама</strong>, можно просто подождать.
         </p>
         <button class="btn btn-secondary" onclick="location.reload()">🔄 Обновить страницу</button>
       </div>
@@ -742,17 +750,21 @@ a:hover { text-decoration: underline; }
         <h2 class="title" style="font-size: 22px;">🎉 Поздравляем!</h2>
         <img src="" alt="Game" class="game-cover" id="result-game-img">
         <h3 class="game-name" id="result-game-name">Название игры</h3>
-        
-        <div class="key-container" id="key-container" onclick="copyKey()">
-          <div class="key-label">Твой ключ Steam</div>
-          <div class="key-value" id="result-key">XXXXX-XXXXX-XXXXX</div>
-          <span class="key-copied" id="key-copied">Скопировано!</span>
-          <p class="key-hint">Нажми чтобы скопировать</p>
-        </div>
 
-        <a href="https://store.steampowered.com/account/registerkey" target="_blank" class="btn btn-success">
-          Активировать в Steam →
-        </a>
+        <button class="btn btn-success" id="btn-reveal-key" style="display: none;">✅ Получить ключ</button>
+
+        <div id="key-section" style="display: none;">
+          <div class="key-container" id="key-container" onclick="copyKey()">
+            <div class="key-label">Твой ключ Steam</div>
+            <div class="key-value" id="result-key">XXXXX-XXXXX-XXXXX</div>
+            <span class="key-copied" id="key-copied">Скопировано!</span>
+            <p class="key-hint">Нажми чтобы скопировать</p>
+          </div>
+
+          <a href="https://store.steampowered.com/account/registerkey" target="_blank" class="btn btn-success">
+            Активировать в Steam →
+          </a>
+        </div>
 
         <div class="post-options" id="post-options">
           <p class="post-options-title">Не понравилась игра?</p>
@@ -785,8 +797,21 @@ a:hover { text-decoration: underline; }
 // === ПЕРЕМЕННЫЕ ===
 let linkCode = '';
 let linkData = null;
-let selectedBoost = 'free';
+let selectedMode = 'normal';
 let steamData = null;
+let steamVerified = false;
+let excludeDuplicatesEnabled = false;
+let preloadedPayments = {
+  boost: null,
+  normal: null,
+  premium: null
+};
+let preloadingPayments = {
+  boost: null,
+  normal: null,
+  premium: null
+};
+let pendingAutoRefresh = null;
 
 // Цены по тирам
 const TIER_PRICES = {
@@ -798,25 +823,27 @@ const TIER_PRICES = {
 };
 
 const TIER_NAMES = {
-  starter: '⚪ Starter',
-  bronze: '🥉 Bronze', 
-  silver: '🥈 Silver',
-  gold: '🥇 Gold',
-  diamond: '💎 Diamond'
+  starter: '1 уровень',
+  bronze: '2 уровень',
+  silver: '3 уровень',
+  gold: '4 уровень',
+  diamond: '5 уровень'
 };
 
 // Примеры игр для рулетки (заглушки)
 const SAMPLE_GAMES = [
-  { name: 'Counter-Strike 2', appId: '730' },
-  { name: 'Dota 2', appId: '570' },
-  { name: 'PUBG', appId: '578080' },
-  { name: 'Rust', appId: '252490' },
-  { name: 'GTA V', appId: '271590' },
-  { name: 'Elden Ring', appId: '1245620' },
-  { name: 'Cyberpunk 2077', appId: '1091500' },
-  { name: 'Red Dead 2', appId: '1174180' },
+  { name: 'Black Myth: Wukong', appId: '2358720' },
+  { name: 'EA SPORTS FC 25', appId: '2669320' },
   { name: 'Hogwarts Legacy', appId: '990080' },
-  { name: 'Baldur\'s Gate 3', appId: '1086940' }
+  { name: 'Cyberpunk 2077', appId: '1091500' },
+  { name: 'Elden Ring', appId: '1245620' },
+  { name: 'Red Dead Redemption 2', appId: '1174180' },
+  { name: 'Baldur\'s Gate 3', appId: '1086940' },
+  { name: 'Starfield', appId: '1716740' },
+  { name: 'Forza Horizon 5', appId: '1551360' },
+  { name: 'God of War Ragnarök', appId: '2322010' },
+  { name: 'Horizon Forbidden West', appId: '2420110' },
+  { name: 'Ghost of Tsushima', appId: '2215430' }
 ];
 
 // === ИНИЦИАЛИЗАЦИЯ ===
@@ -854,21 +881,78 @@ async function loadLinkData() {
     // Проверяем состояние
     if (data.spinCompleted) {
       if (data.keyAssigned) {
+        if (!data.keyRevealed) {
+          preloadPayment('normal');
+          preloadPayment('premium');
+        }
         showResult(data);
       } else {
         showStep('step-result');
         document.getElementById('result-waiting').style.display = 'block';
         document.getElementById('result-assigned').style.display = 'none';
+        setPendingAutoRefresh(true);
       }
     } else {
+      setPendingAutoRefresh(false);
       showStep('step-start');
     }
     
   } catch (e) {
     console.error(e);
+    setPendingAutoRefresh(false);
     showStep('step-error');
     document.getElementById('error-text').textContent = 'Ошибка загрузки данных';
   }
+}
+
+async function preloadPayment(type) {
+  if (!linkCode) return null;
+  if (preloadedPayments[type]) return preloadedPayments[type];
+  if (preloadingPayments[type]) return preloadingPayments[type];
+
+  const endpoint = type === 'boost' ? '/games/api/create-boost-payment' : '/games/api/create-respin-payment';
+  const payload = type === 'boost' ? { code: linkCode } : { code: linkCode, type };
+
+  preloadingPayments[type] = fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.ok && data.payment_url) {
+        preloadedPayments[type] = data.payment_url;
+        return data.payment_url;
+      }
+      return null;
+    })
+    .catch(() => null)
+    .finally(() => {
+      preloadingPayments[type] = null;
+    });
+
+  return preloadingPayments[type];
+}
+
+async function getOrCreatePaymentUrl(type) {
+  if (preloadedPayments[type]) return preloadedPayments[type];
+
+  const preloaded = await preloadPayment(type);
+  if (preloaded) return preloaded;
+
+  const endpoint = type === 'boost' ? '/games/api/create-boost-payment' : '/games/api/create-respin-payment';
+  const payload = type === 'boost' ? { code: linkCode } : { code: linkCode, type };
+  const resp = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await resp.json();
+  if (data.ok && data.payment_url) {
+    preloadedPayments[type] = data.payment_url;
+    return data.payment_url;
+  }
+  throw new Error(data.error || 'Не удалось создать ссылку на оплату');
 }
 
 // === ОБНОВЛЕНИЕ TIER BADGE ===
@@ -881,7 +965,6 @@ function updateTierBadge(tier) {
 // === ОБНОВЛЕНИЕ ЦЕН ===
 function updatePrices(tier) {
   const prices = TIER_PRICES[tier] || TIER_PRICES.starter;
-  document.getElementById('boost-price').textContent = `+${prices.boost} ₽`;
   document.getElementById('respin-price').textContent = `${prices.respin} ₽`;
   document.getElementById('premium-price').textContent = `${prices.premium} ₽`;
 }
@@ -892,49 +975,40 @@ function showStep(stepId) {
   document.getElementById(stepId)?.classList.add('active');
 }
 
+function setPendingAutoRefresh(enabled) {
+  if (pendingAutoRefresh) {
+    clearInterval(pendingAutoRefresh);
+    pendingAutoRefresh = null;
+  }
+  if (enabled) {
+    pendingAutoRefresh = setInterval(async () => {
+      await loadLinkData();
+    }, 8000);
+  }
+}
+
 // === ВЫБОР БУСТА ===
 document.querySelectorAll('.choice').forEach(choice => {
   choice.addEventListener('click', () => {
     document.querySelectorAll('.choice').forEach(c => c.classList.remove('selected'));
     choice.classList.add('selected');
-    selectedBoost = choice.dataset.boost;
+    selectedMode = choice.dataset.mode;
   });
 });
 
-// По умолчанию выбран бесплатный
-document.querySelector('.choice[data-boost="free"]')?.classList.add('selected');
+// По умолчанию выбран режим без исключения
+document.querySelector('.choice[data-mode="normal"]')?.classList.add('selected');
 
 // === КНОПКА "ПРОДОЛЖИТЬ" ===
 document.getElementById('btn-to-steam').addEventListener('click', async () => {
-  if (selectedBoost === 'paid') {
-    // Оплата буста
-    const btn = document.getElementById('btn-to-steam');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="loader"></span>Переход к оплате...';
-    
-    try {
-      const resp = await fetch('/games/api/create-boost-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: linkCode })
-      });
-      const data = await resp.json();
-      
-      if (data.ok && data.payment_url) {
-        window.location.href = data.payment_url;
-      } else {
-        alert(data.error || 'Ошибка создания платежа');
-        btn.disabled = false;
-        btn.textContent = 'Продолжить →';
-      }
-    } catch (e) {
-      alert('Ошибка соединения');
-      btn.disabled = false;
-      btn.textContent = 'Продолжить →';
-    }
-  } else {
-    showStep('step-steam');
-  }
+  excludeDuplicatesEnabled = selectedMode === 'exclude';
+  steamVerified = false;
+  steamData = null;
+  steamInput.value = '';
+  document.getElementById('steam-preview').classList.remove('visible');
+  document.getElementById('steam-warning').classList.remove('visible');
+  updateSteamStepState();
+  showStep('step-steam');
 });
 
 // === КНОПКА "НАЗАД" ===
@@ -945,18 +1019,51 @@ document.getElementById('btn-back-start').addEventListener('click', () => {
 // === ВВОД STEAM URL ===
 const steamInput = document.getElementById('steam-url');
 const btnCheckSteam = document.getElementById('btn-check-steam');
+const countrySelect = document.getElementById('countrySelect');
 
 steamInput.addEventListener('input', () => {
-  btnCheckSteam.disabled = steamInput.value.length < 10;
+  steamVerified = false;
+  steamData = null;
   document.getElementById('steam-preview').classList.remove('visible');
   document.getElementById('steam-warning').classList.remove('visible');
+  updateSteamStepState();
 });
 
-// === ПРОВЕРКА STEAM ===
-btnCheckSteam.addEventListener('click', async () => {
-  const url = steamInput.value.trim();
-  if (!url) return;
-  
+countrySelect.addEventListener('change', () => {
+  updateSteamStepState();
+});
+
+function updateSteamStepState() {
+  const requiresSteam = excludeDuplicatesEnabled;
+  const hasSteamUrl = steamInput.value.trim().length >= 10;
+  const steamInputGroup = document.querySelectorAll('#step-steam .input-group')[0];
+  const steamPreview = document.getElementById('steam-preview');
+  const steamWarning = document.getElementById('steam-warning');
+
+  if (steamInputGroup) {
+    steamInputGroup.style.display = requiresSteam ? 'block' : 'none';
+  }
+  steamInput.style.display = requiresSteam ? 'block' : 'none';
+  steamPreview.style.display = requiresSteam && steamPreview.classList.contains('visible') ? 'flex' : 'none';
+  steamWarning.style.display = requiresSteam && steamWarning.classList.contains('visible') ? 'block' : 'none';
+
+  if (!requiresSteam) {
+    btnCheckSteam.disabled = !countrySelect.value;
+    btnCheckSteam.textContent = 'Крутить рулетку →';
+    return;
+  }
+
+  if (steamVerified) {
+    btnCheckSteam.disabled = false;
+    btnCheckSteam.textContent = 'Продолжить к рулетке →';
+    return;
+  }
+
+  btnCheckSteam.disabled = !hasSteamUrl || !countrySelect.value;
+  btnCheckSteam.textContent = 'Проверить и продолжить →';
+}
+
+async function checkSteamProfile(url) {
   btnCheckSteam.disabled = true;
   btnCheckSteam.innerHTML = '<span class="loader"></span>Проверка...';
   
@@ -970,28 +1077,50 @@ btnCheckSteam.addEventListener('click', async () => {
     
     if (data.ok) {
       steamData = data;
+      steamVerified = true;
       document.getElementById('steam-avatar').src = data.steamAvatar;
       document.getElementById('steam-name').textContent = data.steamName;
       document.getElementById('steam-id').textContent = `ID: ${data.steamId}`;
       document.getElementById('steam-preview').classList.add('visible');
       document.getElementById('steam-warning').classList.remove('visible');
-      
-      btnCheckSteam.textContent = 'Продолжить к рулетке →';
-      btnCheckSteam.disabled = false;
-      btnCheckSteam.onclick = startRoulette;
+      updateSteamStepState();
+      return true;
     } else {
+      steamVerified = false;
+      steamData = null;
       document.getElementById('steam-preview').classList.remove('visible');
       document.getElementById('warning-title-text').textContent = 'Ошибка';
       document.getElementById('warning-text').textContent = data.error;
       document.getElementById('steam-warning').classList.add('visible');
-      
-      btnCheckSteam.textContent = 'Проверить и продолжить →';
-      btnCheckSteam.disabled = false;
+      updateSteamStepState();
+      return false;
     }
   } catch (e) {
+    steamVerified = false;
+    steamData = null;
     alert('Ошибка соединения');
-    btnCheckSteam.textContent = 'Проверить и продолжить →';
-    btnCheckSteam.disabled = false;
+    updateSteamStepState();
+    return false;
+  }
+}
+
+// === ПРОВЕРКА STEAM / ПЕРЕХОД ===
+btnCheckSteam.addEventListener('click', async () => {
+  if (!excludeDuplicatesEnabled) {
+    startRoulette();
+    return;
+  }
+
+  if (steamVerified) {
+    startRoulette();
+    return;
+  }
+
+  const url = steamInput.value.trim();
+  if (!url) return;
+  const ok = await checkSteamProfile(url);
+  if (ok) {
+    startRoulette();
   }
 });
 
@@ -1045,11 +1174,12 @@ document.getElementById('btn-spin').addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         code: linkCode,
-        steamProfileUrl: steamInput.value,
+        steamProfileUrl: excludeDuplicatesEnabled ? steamInput.value : null,
+        country: countrySelect.value,
         steamId: steamData?.steamId,
         steamName: steamData?.steamName,
         steamAvatar: steamData?.steamAvatar,
-        excludeDuplicates: document.getElementById('exclude-duplicates').checked
+        excludeDuplicates: excludeDuplicatesEnabled
       })
     });
     const data = await resp.json();
@@ -1074,7 +1204,7 @@ document.getElementById('btn-spin').addEventListener('click', async () => {
 // === АНИМАЦИЯ РУЛЕТКИ ===
 function spinAnimation() {
   const strip = document.getElementById('roulette-strip');
-  const itemWidth = 110;
+  const itemWidth = 160;
   const totalItems = 50;
   
   // Останавливаемся на случайном mystery элементе
@@ -1102,6 +1232,7 @@ function spinAnimation() {
       showStep('step-result');
       document.getElementById('result-waiting').style.display = 'block';
       document.getElementById('result-assigned').style.display = 'none';
+      setPendingAutoRefresh(true);
     }, 1500);
     
   }, 5000);
@@ -1131,9 +1262,13 @@ function createConfetti() {
 
 // === ПОКАЗ РЕЗУЛЬТАТА ===
 function showResult(data) {
+  setPendingAutoRefresh(false);
   showStep('step-result');
   document.getElementById('result-waiting').style.display = 'none';
   document.getElementById('result-assigned').style.display = 'block';
+  const keySection = document.getElementById('key-section');
+  const postOptions = document.getElementById('post-options');
+  const revealBtn = document.getElementById('btn-reveal-key');
   
   const gameImg = document.getElementById('result-game-img');
   if (data.steamAppId) {
@@ -1144,9 +1279,46 @@ function showResult(data) {
   
   document.getElementById('result-game-name').textContent = data.gameName || 'Игра';
   document.getElementById('result-key').textContent = data.gameKey || 'XXXXX-XXXXX-XXXXX';
+
+  if (data.keyRevealed) {
+    keySection.style.display = 'block';
+    revealBtn.style.display = 'none';
+    postOptions.style.display = 'none';
+  } else {
+    keySection.style.display = 'none';
+    revealBtn.style.display = 'block';
+    postOptions.style.display = 'block';
+    preloadPayment('normal');
+    preloadPayment('premium');
+  }
   
   // Конфетти при первом показе
   setTimeout(createConfetti, 500);
+}
+
+document.getElementById('btn-reveal-key').addEventListener('click', revealKey);
+
+async function revealKey() {
+  const revealBtn = document.getElementById('btn-reveal-key');
+  revealBtn.disabled = true;
+  revealBtn.innerHTML = '<span class="loader"></span>Открываем...';
+
+  try {
+    const resp = await fetch('/games/api/reveal-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: linkCode })
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      throw new Error(data.error || 'Не удалось открыть ключ');
+    }
+    await loadLinkData();
+  } catch (e) {
+    alert(e.message || 'Ошибка соединения');
+    revealBtn.disabled = false;
+    revealBtn.textContent = '✅ Получить ключ';
+  }
 }
 
 // === КОПИРОВАНИЕ КЛЮЧА ===
@@ -1169,21 +1341,10 @@ async function createRespinPayment(type) {
   btn.innerHTML = '<span class="loader"></span>...';
   
   try {
-    const resp = await fetch('/games/api/create-respin-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: linkCode, type })
-    });
-    const data = await resp.json();
-    
-    if (data.ok && data.payment_url) {
-      window.location.href = data.payment_url;
-    } else {
-      alert(data.error || 'Ошибка');
-      location.reload();
-    }
+    const paymentUrl = await getOrCreatePaymentUrl(type);
+    window.location.href = paymentUrl;
   } catch (e) {
-    alert('Ошибка соединения');
+    alert(e.message || 'Ошибка соединения');
     location.reload();
   }
 }
@@ -1199,6 +1360,7 @@ if (urlParams.get('respin_success') === '1') {
   alert('Оплата принята! Ожидайте новую игру.');
   window.location.href = window.location.pathname;
 }
+updateSteamStepState();
 </script>
 
 </body>
