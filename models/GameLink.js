@@ -13,6 +13,8 @@ const gameLinkSchema = new mongoose.Schema({
   steamName: { type: String, default: null },
   steamAvatar: { type: String, default: null },
   country: { type: String, default: null },
+  customerName: { type: String, default: null },
+  orderNumber: { type: String, default: null },
 
   // Доплата ДО рулетки (повышенный шанс)
   boosted: { type: Boolean, default: false },

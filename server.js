@@ -254,7 +254,7 @@ app.post('/api/admin/generate-links', adminAuth, async (req, res) => {
 
 // ═══════ ADMIN: Назначить ключ ═══════
 app.post('/api/admin/assign-key', adminAuth, async (req, res) => {
-  const { code, gameName, gameKey, steamAppId } = req.body;
+  const { code, gameName, gameKey, steamAppId, customerName, orderNumber } = req.body;
 
   const link = await GameLink.findOne({ code });
   if (!link) return res.json({ ok: false, error: 'Ссылка не найдена' });
@@ -263,6 +263,12 @@ app.post('/api/admin/assign-key', adminAuth, async (req, res) => {
   link.gameName = gameName;
   link.gameKey = gameKey;
   link.steamAppId = steamAppId || null;
+  link.customerName = customerName || null;
+  link.orderNumber = orderNumber || null;
+  link.respinRequested = false;
+  link.respinPaid = false;
+  link.respinType = null;
+  link.keyRevealed = false;
   await link.save();
 
   res.json({ ok: true });
@@ -274,7 +280,7 @@ app.get('/api/admin/links', adminAuth, async (req, res) => {
 
   const stats = {
     total: links.length,
-    waiting: links.filter(l => l.spinCompleted && !l.keyAssigned).length,
+    waiting: links.filter(l => l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length,
     completed: links.filter(l => l.keyAssigned).length,
     unused: links.filter(l => !l.spinCompleted).length,
     byTier: {
