@@ -6,10 +6,37 @@ const path = require('path');
 const crypto = require('crypto');
 const forge = require('node-forge');
 const https = require('https');
+const multer = require('multer');
+const XLSX = require('xlsx');
 
 const GameLink = require('./models/GameLink');
+const ImportedOrder = require('./models/ImportedOrder');
 
 const app = express();
+const helmet = require('helmet');
+app.use(helmet({
+  contentSecurityPolicy: false  // Отключаем CSP (разрешаем inline-скрипты)
+}));
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+const rateLimit = require('express-rate-limit');
+
+// ═══════ Rate limiters ═══════
+const steamCheckLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 минута
+  max: 10, // 10 запросов
+  message: { ok: false, error: 'Слишком много попыток. Подождите минуту.' }
+});
+
+const paymentLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 минут
+  max: 5,
+  message: { ok: false, error: 'Слишком много запросов. Подождите 5 минут.' }
+});
+
+// ═══════ In-memory rate limiting для /api/link/:code ═══════
+const linkAttempts = new Map();
+setInterval(() => linkAttempts.clear(), 60000); // Очистка каждую минуту
 
 app.use(cors());
 app.use(express.json());
@@ -18,15 +45,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
-
-// ═══════ Авторизация админа ═══════
-function adminAuth(req, res, next) {
-  const secret = req.headers['x-admin-secret'];
-  if (secret !== process.env.ADMIN_SECRET) {
-    return res.status(403).json({ error: 'Доступ запрещён' });
-  }
-  next();
-}
 
 // ═══════ Утилита: запрос к Steam API ═══════
 function steamApiRequest(url) {
@@ -44,84 +62,54 @@ function steamApiRequest(url) {
 
 // ═══════ Парсинг Steam ID из URL ═══════
 function extractSteamInfo(url) {
-  // https://steamcommunity.com/id/username
-  // https://steamcommunity.com/profiles/76561198000000000
   const idMatch = url.match(/steamcommunity\.com\/id\/([^\/\?]+)/);
   const profileMatch = url.match(/steamcommunity\.com\/profiles\/(\d+)/);
-
-  if (profileMatch) {
-    return { type: 'steamid64', value: profileMatch[1] };
-  }
-  if (idMatch) {
-    return { type: 'vanity', value: idMatch[1] };
-  }
+  if (profileMatch) return { type: 'steamid64', value: profileMatch[1] };
+  if (idMatch) return { type: 'vanity', value: idMatch[1] };
   return null;
 }
 
 // ═══════ API: Проверка Steam профиля ═══════
-app.post('/api/check-steam', async (req, res) => {
+app.post('/api/check-steam', steamCheckLimiter, async (req, res) => {
   try {
     const { steamUrl } = req.body;
-
-    if (!steamUrl) {
-      return res.json({ ok: false, error: 'Укажите ссылку на профиль Steam' });
-    }
+    if (!steamUrl) return res.json({ ok: false, error: 'Укажите ссылку на профиль Steam' });
 
     const steamInfo = extractSteamInfo(steamUrl);
-    if (!steamInfo) {
-      return res.json({ ok: false, error: 'Неверный формат ссылки. Используйте: steamcommunity.com/id/... или steamcommunity.com/profiles/...' });
-    }
+    if (!steamInfo) return res.json({ ok: false, error: 'Неверный формат ссылки. Используйте: steamcommunity.com/id/... или steamcommunity.com/profiles/...' });
 
     const STEAM_KEY = process.env.STEAM_API_KEY;
-    if (!STEAM_KEY) {
-      return res.json({ ok: false, error: 'Steam API ключ не настроен' });
-    }
+    if (!STEAM_KEY) return res.json({ ok: false, error: 'Steam API ключ не настроен' });
 
     let steamId64 = null;
 
-    // Резолвим vanity URL
     if (steamInfo.type === 'vanity') {
-      const vanityData = await steamApiRequest(
-        `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key=${STEAM_KEY}&vanityurl=${steamInfo.value}`
-      );
-      if (vanityData.response?.success !== 1) {
-        return res.json({ ok: false, error: 'Профиль Steam не найден. Проверьте ссылку.' });
-      }
+      const vanityData = await steamApiRequest(`https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key=${STEAM_KEY}&vanityurl=${steamInfo.value}`);
+      if (vanityData.response?.success !== 1) return res.json({ ok: false, error: 'Профиль Steam не найден. Проверьте ссылку.' });
       steamId64 = vanityData.response.steamid;
     } else {
       steamId64 = steamInfo.value;
     }
 
-    // Получаем информацию о профиле
-    const profileData = await steamApiRequest(
-      `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${STEAM_KEY}&steamids=${steamId64}`
-    );
-
+    const profileData = await steamApiRequest(`https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${STEAM_KEY}&steamids=${steamId64}`);
     const player = profileData.response?.players?.[0];
-    if (!player) {
-      return res.json({ ok: false, error: 'Профиль Steam не найден' });
-    }
+    if (!player) return res.json({ ok: false, error: 'Профиль Steam не найден' });
 
-    // communityvisibilitystate: 1 = Private, 3 = Public
     if (player.communityvisibilitystate !== 3) {
       return res.json({
         ok: false,
-        error: 'Профиль закрыт! Откройте профиль в настройках Steam: Редактировать профиль → Настройки приватности → Основные сведения → Открытый',
+        error: 'Профиль закрыт! Откройте его: Редактировать профиль → Приватность → Мой профиль → Открытый',
         profileClosed: true
       });
     }
 
-    // Проверяем видимость игр
-    const gamesData = await steamApiRequest(
-      `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_KEY}&steamid=${steamId64}&include_played_free_games=1`
-    );
-
+    const gamesData = await steamApiRequest(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_KEY}&steamid=${steamId64}&include_played_free_games=1`);
     const gamesVisible = gamesData.response && (gamesData.response.game_count !== undefined);
 
     if (!gamesVisible) {
       return res.json({
         ok: false,
-        error: 'Раздел с играми закрыт! Откройте: Редактировать профиль → Настройки приватности → Игровые данные → Открытый',
+        error: 'Раздел с играми закрыт! Откройте: Редактировать профиль → Приватность → Доступ к игровой информации → Открытый',
         gamesClosed: true,
         steamId: steamId64,
         steamName: player.personaname,
@@ -129,7 +117,6 @@ app.post('/api/check-steam', async (req, res) => {
       });
     }
 
-    // Получаем список игр для исключения дубликатов
     const ownedAppIds = [];
     if (gamesData.response?.games) {
       gamesData.response.games.forEach(g => ownedAppIds.push(String(g.appid)));
@@ -147,9 +134,12 @@ app.post('/api/check-steam', async (req, res) => {
     });
 
   } catch (e) {
-    console.error('Steam check error:', e);
-    res.json({ ok: false, error: 'Ошибка проверки Steam. Попробуйте позже.' });
-  }
+  console.error('Steam check error:', e.message);
+  const errorMsg = process.env.NODE_ENV === 'production'
+    ? 'Ошибка проверки Steam. Попробуйте позже.'
+    : e.message;
+  res.json({ ok: false, error: errorMsg });
+}
 });
 
 // ═══════ Страница рулетки ═══════
@@ -160,27 +150,57 @@ app.get('/g/:code', (req, res) => {
 // ═══════ API: Проверка ссылки ═══════
 app.get('/api/link/:code', async (req, res) => {
   try {
+    // ═══════ Rate limiting (20 попыток в минуту с одного IP) ═══════
+    const ip = req.ip || req.connection.remoteAddress;
+    const attempts = (linkAttempts.get(ip) || 0) + 1;
+    linkAttempts.set(ip, attempts);
+
+    if (attempts > 20) {
+      return res.status(429).json({ valid: false, error: 'Слишком много попыток. Подождите минуту.' });
+    }
+    // ══════════════════════════════════════════════════════════
+
     const link = await GameLink.findOne({ code: req.params.code });
     if (!link) return res.json({ valid: false, error: 'Ссылка не найдена' });
     if (!link.active) return res.json({ valid: false, error: 'Ссылка деактивирована' });
 
     if (link.spinCompleted) {
-      return res.json({
-        valid: true,
-        spinCompleted: true,
-        keyAssigned: link.keyAssigned,
-        keyRevealed: link.keyRevealed,
-        excludeDuplicates: link.excludeDuplicates,
-        steamName: link.steamName,
-        steamAvatar: link.steamAvatar,
-        gameName: link.gameName,
-        gameKey: link.gameKey,
-        steamAppId: link.steamAppId,
-        tier: link.tier
-      });
+      if (link.keyAssigned) {
+        return res.json({
+          valid: true,
+          spinCompleted: true,
+          keyAssigned: true,
+          keyRevealed: link.keyRevealed,
+          gameName: link.gameName,
+          gameKey: link.keyRevealed ? link.gameKey : null,
+          steamAppId: link.steamAppId,
+          tier: link.tier,
+          boosted: link.boosted,
+          excludeDuplicates: link.excludeDuplicates,
+          steamName: link.steamName,
+          steamAvatar: link.steamAvatar,
+          respinCount: link.respinCount
+        });
+      } else {
+        return res.json({
+          valid: true,
+          spinCompleted: true,
+          keyAssigned: false,
+          tier: link.tier,
+          boosted: link.boosted,
+          excludeDuplicates: link.excludeDuplicates,
+          steamName: link.steamName,
+          steamAvatar: link.steamAvatar
+        });
+      }
     }
 
-    res.json({ valid: true, spinCompleted: false, tier: link.tier });
+    res.json({
+      valid: true,
+      spinCompleted: false,
+      tier: link.tier,
+      boosted: link.boosted || false
+    });
   } catch (e) {
     res.status(500).json({ valid: false, error: 'Ошибка сервера' });
   }
@@ -192,9 +212,7 @@ app.post('/api/spin', async (req, res) => {
     const { code, steamProfileUrl, steamId, steamName, steamAvatar, country, excludeDuplicates } = req.body;
 
     const link = await GameLink.findOne({ code });
-    if (!link || !link.active) {
-      return res.json({ ok: false, error: 'Недействительная ссылка' });
-    }
+    if (!link || !link.active) return res.json({ ok: false, error: 'Недействительная ссылка' });
 
     if (link.spinCompleted) {
       return res.json({
@@ -203,7 +221,7 @@ app.post('/api/spin', async (req, res) => {
         keyAssigned: link.keyAssigned,
         keyRevealed: link.keyRevealed,
         gameName: link.gameName,
-        gameKey: link.gameKey,
+        gameKey: link.keyRevealed ? link.gameKey : null,
         steamAppId: link.steamAppId
       });
     }
@@ -217,11 +235,7 @@ app.post('/api/spin', async (req, res) => {
     link.country = country || null;
     await link.save();
 
-    res.json({
-      ok: true,
-      alreadySpun: false,
-      keyAssigned: false
-    });
+    res.json({ ok: true, alreadySpun: false, keyAssigned: false });
   } catch (e) {
     console.error('Spin error:', e);
     res.status(500).json({ ok: false, error: 'Ошибка сервера' });
@@ -229,7 +243,7 @@ app.post('/api/spin', async (req, res) => {
 });
 
 // ═══════ ADMIN: Генерация ссылок ═══════
-app.post('/api/admin/generate-links', adminAuth, async (req, res) => {
+app.post('/api/admin/generate-links', async (req, res) => {
   const { count, tier, note } = req.body;
 
   if (!tier || !['starter', 'bronze', 'silver', 'gold', 'diamond'].includes(tier)) {
@@ -237,23 +251,26 @@ app.post('/api/admin/generate-links', adminAuth, async (req, res) => {
   }
 
   const links = [];
-  for (let i = 0; i < (count || 1); i++) {
-    let code = '';
-    let exists = true;
-    while (exists) {
-      code = crypto.randomBytes(18).toString('base64url');
-      exists = Boolean(await GameLink.exists({ code }));
-    }
+for (let i = 0; i < (count || 1); i++) {
+  const code = crypto.randomBytes(18).toString('base64url');
+  try {
     const link = new GameLink({ code, tier, note: note || '' });
     await link.save();
     links.push({ code, tier, url: `${process.env.BASE_URL}/games/g/${code}` });
+  } catch (e) {
+    if (e.code === 11000) { // Duplicate key (коллизия, 1 на миллиард)
+      i--; // Повторить итерацию
+      continue;
+    }
+    throw e;
   }
+}
 
   res.json({ ok: true, links });
 });
 
 // ═══════ ADMIN: Назначить ключ ═══════
-app.post('/api/admin/assign-key', adminAuth, async (req, res) => {
+app.post('/api/admin/assign-key', async (req, res) => {
   const { code, gameName, gameKey, steamAppId, customerName, orderNumber } = req.body;
 
   const link = await GameLink.findOne({ code });
@@ -274,15 +291,19 @@ app.post('/api/admin/assign-key', adminAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ═══════ ADMIN: Список ссылок ═══════
-app.get('/api/admin/links', adminAuth, async (req, res) => {
-  const links = await GameLink.find().sort({ createdAt: -1 });
+// ═══════ ADMIN: Список ссылок (с полной информацией) ═══════
+app.get('/api/admin/links', async (req, res) => {
+  const links = await GameLink.find().sort({ createdAt: -1 }).lean();
+
+  const waiting = links.filter(l => l.spinCompleted && (!l.keyAssigned || l.respinRequested));
+  const completed = links.filter(l => l.keyAssigned && !l.respinRequested);
+  const unused = links.filter(l => !l.spinCompleted);
 
   const stats = {
     total: links.length,
-    waiting: links.filter(l => l.spinCompleted && (!l.keyAssigned || l.respinRequested)).length,
-    completed: links.filter(l => l.keyAssigned).length,
-    unused: links.filter(l => !l.spinCompleted).length,
+    waiting: waiting.length,
+    completed: completed.length,
+    unused: unused.length,
     byTier: {
       starter: links.filter(l => l.tier === 'starter' && !l.spinCompleted).length,
       bronze: links.filter(l => l.tier === 'bronze' && !l.spinCompleted).length,
@@ -296,9 +317,165 @@ app.get('/api/admin/links', adminAuth, async (req, res) => {
 });
 
 // ═══════ ADMIN: Удалить ссылку ═══════
-app.delete('/api/admin/link/:code', adminAuth, async (req, res) => {
+app.delete('/api/admin/link/:code', async (req, res) => {
   await GameLink.deleteOne({ code: req.params.code });
   res.json({ ok: true });
+});
+
+// ═══════ ADMIN: Поиск по имени (GameLink + ImportedOrder) ═══════
+app.get('/api/admin/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) return res.json({ ok: true, results: [] });
+    if (q.length > 100) return res.json({ ok: false, error: 'Запрос слишком длинный' });
+
+    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
+    const gameLinks = await GameLink.find({
+      $or: [
+        { customerName: regex },
+        { steamName: regex },
+        { steamId: regex },
+        { orderNumber: regex },
+        { gameName: regex }
+      ]
+    }).sort({ createdAt: -1 }).lean();
+
+    const imported = await ImportedOrder.find({
+      $or: [
+        { customerName: regex },
+        { gameName: regex },
+        { orderNumber: regex }
+      ]
+    }).sort({ createdAt: -1 }).lean();
+
+    const results = [
+      ...gameLinks.map(l => ({
+        source: 'system',
+        orderNumber: l.orderNumber || l.code,
+        customerName: l.customerName,
+        gameName: l.gameName,
+        gameKey: l.gameKey,
+        tier: l.tier,
+        steamId: l.steamId,
+        steamName: l.steamName,
+        steamAvatar: l.steamAvatar,
+        boosted: l.boosted,
+        respinCount: l.respinCount,
+        createdAt: l.createdAt
+      })),
+      ...imported.map(i => ({
+        source: 'imported',
+        orderNumber: i.orderNumber,
+        customerName: i.customerName,
+        gameName: i.gameName,
+        gameKey: i.gameKey,
+        tier: null,
+        steamId: null,
+        steamName: null,
+        steamAvatar: null,
+        boosted: false,
+        respinCount: 0,
+        createdAt: i.createdAt
+      }))
+    ];
+
+    res.json({ ok: true, results });
+  } catch (e) {
+    console.error('Search error:', e);
+    res.status(500).json({ ok: false, error: 'Ошибка поиска' });
+  }
+});
+
+// ═══════ ADMIN: Импорт Excel ═══════
+app.post('/api/admin/import', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.json({ ok: false, error: 'Файл не загружен' });
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    if (!rows.length) return res.json({ ok: false, error: 'Файл пустой' });
+
+    const preview = rows.slice(0, 10).map(row => ({
+      gameName: row['ИГРА'] || row['gameName'] || row['Game'] || '',
+      gameKey: row['КЛЮЧ'] || row['gameKey'] || row['Key'] || '',
+      orderNumber: row['НОМЕР ЗАКАЗА'] || row['orderNumber'] || row['Order'] || '',
+      customerName: row['ФИО'] || row['customerName'] || row['Name'] || ''
+    }));
+
+    // If confirm=true, actually import
+    if (req.body?.confirm === 'true' || req.query?.confirm === 'true') {
+      const docs = rows.map(row => ({
+        gameName: row['ИГРА'] || row['gameName'] || row['Game'] || '',
+        gameKey: row['КЛЮЧ'] || row['gameKey'] || row['Key'] || '',
+        orderNumber: String(row['НОМЕР ЗАКАЗА'] || row['orderNumber'] || row['Order'] || ''),
+        customerName: row['ФИО'] || row['customerName'] || row['Name'] || ''
+      }));
+
+      await ImportedOrder.insertMany(docs);
+      return res.json({ ok: true, imported: docs.length });
+    }
+
+    res.json({ ok: true, preview, totalRows: rows.length });
+  } catch (e) {
+    console.error('Import error:', e);
+    res.status(500).json({ ok: false, error: 'Ошибка импорта: ' + e.message });
+  }
+});
+
+// ═══════ ADMIN: Подтверждение импорта (отдельный эндпоинт) ═══════
+app.post('/api/admin/import-confirm', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.json({ ok: false, error: 'Файл не загружен' });
+
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    const docs = rows.map(row => ({
+      gameName: row['ИГРА'] || row['gameName'] || row['Game'] || '',
+      gameKey: row['КЛЮЧ'] || row['gameKey'] || row['Key'] || '',
+      orderNumber: String(row['НОМЕР ЗАКАЗА'] || row['orderNumber'] || row['Order'] || ''),
+      customerName: row['ФИО'] || row['customerName'] || row['Name'] || ''
+    }));
+
+    await ImportedOrder.insertMany(docs);
+    res.json({ ok: true, imported: docs.length });
+  } catch (e) {
+    console.error('Import confirm error:', e);
+    res.status(500).json({ ok: false, error: 'Ошибка импорта: ' + e.message });
+  }
+});
+
+// ═══════ ADMIN: История (все выданные) ═══════
+app.get('/api/admin/history', async (req, res) => {
+  try {
+    const gameLinks = await GameLink.find({ keyAssigned: true }).sort({ updatedAt: -1 }).lean();
+    const imported = await ImportedOrder.find().sort({ createdAt: -1 }).lean();
+
+    res.json({ ok: true, gameLinks, imported });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'Ошибка' });
+  }
+});
+
+// ═══════ ПОКАЗАТЬ КЛЮЧ ═══════
+app.post('/api/reveal-key', async (req, res) => {
+  try {
+    const { code } = req.body;
+    const link = await GameLink.findOne({ code });
+    if (!link || !link.keyAssigned) return res.json({ ok: false, error: 'Ключ не назначен' });
+
+    link.keyRevealed = true;
+    await link.save();
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'Ошибка сервера' });
+  }
 });
 
 // ═══════ Секретная админка ═══════
@@ -306,19 +483,13 @@ app.get(`/${process.env.ADMIN_URL}`, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Games server running on port ${PORT}`);
-});
-
 // ═══════ ANTILOPAY CONFIG ═══════
 const ANTILOPAY_SECRET_ID = process.env.ANTILOPAY_SECRET_ID || '';
 const ANTILOPAY_SECRET_KEY = process.env.ANTILOPAY_SECRET_KEY || '';
 const ANTILOPAY_PROJECT_ID = process.env.ANTILOPAY_PROJECT_ID || '';
 
-// ═══════ ЦЕНЫ ПО УРОВНЯМ ═══════
 const TIER_PRICES = {
-  starter: { base: 150, boost: 45, respin: 45, premium: 90 },
+  starter: { base: 1, boost: 1, respin: 1, premium: 1 },
   bronze: { base: 450, boost: 135, respin: 135, premium: 270 },
   silver: { base: 700, boost: 210, respin: 210, premium: 420 },
   gold: { base: 1000, boost: 300, respin: 300, premium: 600 },
@@ -332,20 +503,11 @@ function isFreshPreparedAt(dateValue, maxAgeMs = 30 * 60 * 1000) {
   return (Date.now() - preparedAt) < maxAgeMs;
 }
 
-// ═══════ ANTILOPAY HELPERS ═══════
 function signAntilopayRequest(body) {
   const json_str = JSON.stringify(body);
-  
   let keyPem = ANTILOPAY_SECRET_KEY.trim();
-  
-  // Убираем внешние кавычки
-  if (keyPem.startsWith('"') && keyPem.endsWith('"')) {
-    keyPem = keyPem.slice(1, -1);
-  }
-  
-  // Заменяем экранированные \n на настоящие
+  if (keyPem.startsWith('"') && keyPem.endsWith('"')) keyPem = keyPem.slice(1, -1);
   keyPem = keyPem.replace(/\\n/g, '\n');
-  
   try {
     const privateKey = forge.pki.privateKeyFromPem(keyPem);
     const md = forge.md.sha256.create();
@@ -359,45 +521,24 @@ function signAntilopayRequest(body) {
 }
 
 // ═══════ СОЗДАНИЕ ПЛАТЕЖА (BOOST) ═══════
-app.post('/api/create-boost-payment', async (req, res) => {
+app.post('/api/create-boost-payment', paymentLimiter, async (req, res) => {
   try {
-    console.log('[BOOST] Request received:', req.body);
     const { code } = req.body;
-
     const link = await GameLink.findOne({ code });
-    console.log('[BOOST] Link found:', link ? `tier=${link.tier}, boosted=${link.boosted}` : 'NOT FOUND');
-    
-    if (!link || !link.active) {
-      return res.json({ ok: false, error: 'Ссылка недействительна' });
-    }
-
-    if (link.spinCompleted) {
-      return res.json({ ok: false, error: 'Рулетка уже прокручена' });
-    }
-
-    if (link.boosted || link.boostPaid) {
-      return res.json({ ok: false, error: 'Повышение шанса уже оплачено' });
-    }
+    if (!link || !link.active) return res.json({ ok: false, error: 'Ссылка недействительна' });
+    if (link.spinCompleted) return res.json({ ok: false, error: 'Рулетка уже прокручена' });
+    if (link.boosted || link.boostPaid) return res.json({ ok: false, error: 'Повышение шанса уже оплачено' });
 
     if (link.boostPaymentUrl && isFreshPreparedAt(link.boostPreparedAt)) {
-      return res.json({
-        ok: true,
-        payment_url: link.boostPaymentUrl,
-        order_id: link.boostOrderId,
-        preloaded: true
-      });
+      return res.json({ ok: true, payment_url: link.boostPaymentUrl, order_id: link.boostOrderId, preloaded: true });
     }
 
     const amount = TIER_PRICES[link.tier].boost;
     const order_id = `boost_${code}_${Date.now()}`;
 
-    console.log('[BOOST] Creating payment:', { amount, order_id, tier: link.tier });
-
     const body = {
       project_identificator: ANTILOPAY_PROJECT_ID,
-      amount,
-      order_id,
-      currency: 'RUB',
+      amount, order_id, currency: 'RUB',
       product_name: `Повышенный шанс (${link.tier})`,
       product_type: 'services',
       description: `Повышение шанса на дорогую игру`,
@@ -406,10 +547,7 @@ app.post('/api/create-boost-payment', async (req, res) => {
       customer: { email: 'support@codenext.ru' },
     };
 
-    console.log('[BOOST] Request body:', JSON.stringify(body, null, 2));
-
     const signature = signAntilopayRequest(body);
-    console.log('[BOOST] Signature created:', signature.substring(0, 30) + '...');
 
     const response = await fetch('https://lk.antilopay.com/api/v1/payment/create', {
       method: 'POST',
@@ -423,12 +561,7 @@ app.post('/api/create-boost-payment', async (req, res) => {
     });
 
     const result = await response.json();
-    console.log('[BOOST] Antilopay response:', JSON.stringify(result, null, 2));
-
-    if (result.code !== 0) {
-      console.error('[BOOST] Antilopay error:', result);
-      return res.json({ ok: false, error: 'Ошибка создания платежа' });
-    }
+    if (result.code !== 0) return res.json({ ok: false, error: 'Ошибка создания платежа' });
 
     link.boostOrderId = order_id;
     link.boostTransactionId = result.payment_id;
@@ -436,9 +569,7 @@ app.post('/api/create-boost-payment', async (req, res) => {
     link.boostPreparedAt = new Date();
     await link.save();
 
-    console.log('[BOOST] Success! Payment URL:', result.payment_url);
     res.json({ ok: true, payment_url: result.payment_url, order_id });
-
   } catch (e) {
     console.error('[BOOST] Exception:', e);
     res.status(500).json({ ok: false, error: 'Ошибка сервера' });
@@ -446,18 +577,14 @@ app.post('/api/create-boost-payment', async (req, res) => {
 });
 
 // ═══════ СОЗДАНИЕ ПЛАТЕЖА (RESPIN) ═══════
-app.post('/api/create-respin-payment', async (req, res) => {
+app.post('/api/create-respin-payment', paymentLimiter, async (req, res) => {
   try {
-    const { code, type } = req.body; // type: 'normal' или 'premium'
-
+    const { code, type } = req.body;
     const link = await GameLink.findOne({ code });
     if (!link || !link.active || !link.keyAssigned || link.keyRevealed) {
       return res.json({ ok: false, error: 'Недоступно' });
     }
-
-    if (!['normal', 'premium'].includes(type)) {
-      return res.json({ ok: false, error: 'Неверный тип' });
-    }
+    if (!['normal', 'premium'].includes(type)) return res.json({ ok: false, error: 'Неверный тип' });
 
     const isPremium = type === 'premium';
     const existingPaymentUrl = isPremium ? link.respinPremiumPaymentUrl : link.respinNormalPaymentUrl;
@@ -465,12 +592,7 @@ app.post('/api/create-respin-payment', async (req, res) => {
     const existingPreparedAt = isPremium ? link.respinPremiumPreparedAt : link.respinNormalPreparedAt;
 
     if (existingPaymentUrl && isFreshPreparedAt(existingPreparedAt)) {
-      return res.json({
-        ok: true,
-        payment_url: existingPaymentUrl,
-        order_id: existingOrderId,
-        preloaded: true
-      });
+      return res.json({ ok: true, payment_url: existingPaymentUrl, order_id: existingOrderId, preloaded: true });
     }
 
     const price_key = type === 'premium' ? 'premium' : 'respin';
@@ -479,12 +601,10 @@ app.post('/api/create-respin-payment', async (req, res) => {
 
     const body = {
       project_identificator: ANTILOPAY_PROJECT_ID,
-      amount,
-      order_id,
-      currency: 'RUB',
-      product_name: type === 'premium' ? 'Премиум перекрутка' : 'Перекрутка',
+      amount, order_id, currency: 'RUB',
+      product_name: type === 'premium' ? 'Перекрутка с бустом' : 'Перекрутка',
       product_type: 'services',
-      description: type === 'premium' ? 'Перекрутка с гарантией лучшей игры' : 'Перекрутка рулетки',
+      description: type === 'premium' ? 'Перекрутка с повышенным шансом' : 'Перекрутка рулетки',
       success_url: `${process.env.BASE_URL}/games/g/${code}?respin_success=1`,
       fail_url: `${process.env.BASE_URL}/games/g/${code}?respin_failed=1`,
       customer: { email: 'support@codenext.ru' },
@@ -504,10 +624,7 @@ app.post('/api/create-respin-payment', async (req, res) => {
     });
 
     const result = await response.json();
-
-    if (result.code !== 0) {
-      return res.json({ ok: false, error: 'Ошибка создания платежа' });
-    }
+    if (result.code !== 0) return res.json({ ok: false, error: 'Ошибка создания платежа' });
 
     link.respinOrderId = order_id;
     link.respinTransactionId = result.payment_id;
@@ -526,23 +643,39 @@ app.post('/api/create-respin-payment', async (req, res) => {
     await link.save();
 
     res.json({ ok: true, payment_url: result.payment_url, order_id });
-
   } catch (e) {
     console.error('Respin payment error:', e);
     res.status(500).json({ ok: false, error: 'Ошибка сервера' });
   }
 });
 
-// ═══════ WEBHOOK ANTILOPAY (ДЛЯ ДОПЛАТ) ═══════
+// ═══════ WEBHOOK ANTILOPAY ═══════
 app.post('/api/webhook/antilopay-games', async (req, res) => {
   try {
-    const { order_id, status, payment_id, original_amount } = req.body;
-
-    if (status !== 'SUCCESS') {
-      return res.send('OK');
+    // ═══════ Проверка подписи ═══════
+    const receivedSign = req.headers['x-apay-sign'];
+    if (!receivedSign) {
+      console.error('[WEBHOOK] Missing signature');
+      return res.status(403).send('FORBIDDEN');
     }
 
-    // Обработка boost
+    let expectedSign;
+    try {
+      expectedSign = signAntilopayRequest(req.body);
+    } catch (e) {
+      console.error('[WEBHOOK] Sign generation failed:', e.message);
+      return res.status(500).send('ERROR');
+    }
+
+    if (receivedSign !== expectedSign) {
+      console.error('[WEBHOOK] Invalid signature');
+      return res.status(403).send('FORBIDDEN');
+    }
+    // ═══════════════════════════════
+
+    const { order_id, status } = req.body;
+    if (status !== 'SUCCESS') return res.send('OK');
+
     if (order_id.startsWith('boost_')) {
       const link = await GameLink.findOne({ boostOrderId: order_id });
       if (link && !link.boostPaid) {
@@ -554,20 +687,20 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
       }
     }
 
-    // Обработка respin
     if (order_id.startsWith('respin_')) {
       const link = await GameLink.findOne({
-        $or: [
-          { respinOrderId: order_id },
-          { respinNormalOrderId: order_id },
-          { respinPremiumOrderId: order_id }
-        ]
+        $or: [{ respinOrderId: order_id }, { respinNormalOrderId: order_id }, { respinPremiumOrderId: order_id }]
       });
-      if (link && !link.respinPaid) {
+            if (link && !link.respinPaid) {
         link.respinPaid = true;
         link.respinRequested = true;
         link.respinCount += 1;
-        link.keyRevealed = false; // ключ больше не показываем
+        link.keyRevealed = false;
+        link.keyAssigned = false;
+        link.gameName = null;
+        link.gameKey = null;
+        link.steamAppId = null;
+        link.spinCompleted = false;
         link.respinNormalPaymentUrl = null;
         link.respinNormalPreparedAt = null;
         link.respinPremiumPaymentUrl = null;
@@ -583,21 +716,33 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
   }
 });
 
-// ═══════ ПОКАЗАТЬ КЛЮЧ ═══════
-app.post('/api/reveal-key', async (req, res) => {
+// ═══════ Cron: очистка старых платёжных ссылок (каждые 10 минут) ═══════
+setInterval(async () => {
   try {
-    const { code } = req.body;
+    const expiredTime = new Date(Date.now() - 30 * 60 * 1000); // 30 минут назад
 
-    const link = await GameLink.findOne({ code });
-    if (!link || !link.keyAssigned) {
-      return res.json({ ok: false, error: 'Ключ не назначен' });
-    }
+    await GameLink.updateMany(
+      { boostPreparedAt: { $lt: expiredTime }, boostPaid: false },
+      { $unset: { boostPaymentUrl: 1, boostPreparedAt: 1 } }
+    );
 
-    link.keyRevealed = true;
-    await link.save();
+    await GameLink.updateMany(
+      { respinNormalPreparedAt: { $lt: expiredTime }, respinPaid: false },
+      { $unset: { respinNormalPaymentUrl: 1, respinNormalPreparedAt: 1 } }
+    );
 
-    res.json({ ok: true });
+    await GameLink.updateMany(
+      { respinPremiumPreparedAt: { $lt: expiredTime }, respinPaid: false },
+      { $unset: { respinPremiumPaymentUrl: 1, respinPremiumPreparedAt: 1 } }
+    );
+
+    console.log('[CRON] Expired payment links cleaned');
   } catch (e) {
-    res.status(500).json({ ok: false, error: 'Ошибка сервера' });
+    console.error('[CRON] Cleanup error:', e.message);
   }
+}, 10 * 60 * 1000);
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Games server running on port ${PORT}`);
 });
