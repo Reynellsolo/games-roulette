@@ -50,4 +50,12 @@ const gameLinkSchema = new mongoose.Schema({
   note: { type: String, default: '' }
 }, { timestamps: true });
 
+// ═══════ Индексы ═══════
+gameLinkSchema.index({ spinCompleted: 1, keyAssigned: 1 });
+gameLinkSchema.index({ tier: 1, active: 1 });
+gameLinkSchema.index({ boostOrderId: 1 }, { sparse: true });
+gameLinkSchema.index({ respinOrderId: 1 }, { sparse: true });
+gameLinkSchema.index({ respinNormalOrderId: 1 }, { sparse: true });
+gameLinkSchema.index({ respinPremiumOrderId: 1 }, { sparse: true });
+
 module.exports = mongoose.model('GameLink', gameLinkSchema);
