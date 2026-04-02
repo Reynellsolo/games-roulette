@@ -222,6 +222,7 @@ app.get('/api/link/:code', async (req, res) => {
           tier: link.tier,
           country: link.country,
           boosted: link.boosted,
+          boostPaid: link.boostPaid,
           excludeDuplicates: link.excludeDuplicates,
           steamProfileUrl: link.steamProfileUrl,
           steamId: link.steamId,
@@ -240,6 +241,7 @@ app.get('/api/link/:code', async (req, res) => {
           tier: link.tier,
           country: link.country,
           boosted: link.boosted,
+          boostPaid: link.boostPaid,
           excludeDuplicates: link.excludeDuplicates,
           steamProfileUrl: link.steamProfileUrl,
           steamId: link.steamId,
@@ -259,6 +261,7 @@ app.get('/api/link/:code', async (req, res) => {
       tier: link.tier,
       country: link.country,
       boosted: link.boosted || false,
+      boostPaid: link.boostPaid || false,
       excludeDuplicates: link.excludeDuplicates || false,
       respinRequested: link.respinRequested,
       respinType: link.respinType,
@@ -276,7 +279,7 @@ app.get('/api/link/:code', async (req, res) => {
 // ═══════ API: Прокрутка рулетки ═══════
 app.post('/api/spin', async (req, res) => {
   try {
-    const { code, steamProfileUrl, steamId, steamName, steamAvatar, country, excludeDuplicates } = req.body;
+    const { code, steamProfileUrl, steamId, steamName, steamAvatar, country, excludeDuplicates, boosted } = req.body;
 
     const link = await GameLink.findOne({ code });
     if (!link || !link.active) return res.json({ ok: false, error: 'Недействительная ссылка' });
@@ -295,6 +298,11 @@ app.post('/api/spin', async (req, res) => {
 
     link.spinCompleted = true;
     link.excludeDuplicates = excludeDuplicates || false;
+    if (boosted === true && !link.boosted) {
+      link.boosted = true;
+      link.boostPaid = true;
+      if (!link.boostAmount) link.boostAmount = TIER_PRICES[link.tier]?.boost || 0;
+    }
     link.steamProfileUrl = steamProfileUrl || null;
     link.steamId = steamId || null;
     link.steamName = steamName || null;
@@ -311,29 +319,40 @@ app.post('/api/spin', async (req, res) => {
 
 // ═══════ ADMIN: Генерация ссылок ═══════
 app.post('/api/admin/generate-links', async (req, res) => {
-  const { count, tier, note } = req.body;
-
-  if (!tier || !['starter', 'bronze', 'silver', 'gold', 'diamond'].includes(tier)) {
-    return res.json({ ok: false, error: 'Укажите корректный tier' });
-  }
-
-  const links = [];
-for (let i = 0; i < (count || 1); i++) {
-  const code = crypto.randomBytes(18).toString('base64url');
   try {
-    const link = new GameLink({ code, tier, note: note || '' });
-    await link.save();
-    links.push({ code, tier, url: `${getPublicBaseUrl(req)}/g/${code}` });
-  } catch (e) {
-    if (e.code === 11000) { // Duplicate key (коллизия, 1 на миллиард)
-      i--; // Повторить итерацию
-      continue;
-    }
-    throw e;
-  }
-}
+    const { count, tier, note } = req.body;
+    const hasCount = count !== undefined && count !== null && String(count).trim() !== '';
+    const parsedCount = Number.isInteger(count) ? count : Number.parseInt(count, 10);
+    const normalizedCount = hasCount ? parsedCount : 1;
 
-  res.json({ ok: true, links });
+    if (!tier || !['starter', 'bronze', 'silver', 'gold', 'diamond'].includes(tier)) {
+      return res.json({ ok: false, error: 'Укажите корректный tier' });
+    }
+    if (!Number.isFinite(normalizedCount) || normalizedCount < 1 || normalizedCount > 500) {
+      return res.json({ ok: false, error: 'count должен быть числом от 1 до 500' });
+    }
+
+    const links = [];
+    for (let i = 0; i < normalizedCount; i++) {
+      const code = crypto.randomBytes(18).toString('base64url');
+      try {
+        const link = new GameLink({ code, tier, note: note || '' });
+        await link.save();
+        links.push({ code, tier, url: `${getPublicBaseUrl(req)}/g/${code}` });
+      } catch (e) {
+        if (e.code === 11000) { // Duplicate key (коллизия, 1 на миллиард)
+          i--; // Повторить итерацию
+          continue;
+        }
+        throw e;
+      }
+    }
+
+    res.json({ ok: true, links });
+  } catch (e) {
+    console.error('Generate links error:', e);
+    res.status(500).json({ ok: false, error: 'Ошибка генерации ссылок' });
+  }
 });
 
 // ═══════ ADMIN: Назначить ключ ═══════
@@ -561,9 +580,13 @@ app.post('/api/reveal-key', async (req, res) => {
 });
 
 // ═══════ Секретная админка ═══════
-app.get(`/${process.env.ADMIN_URL}`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
+if (process.env.ADMIN_URL) {
+  app.get(`/${process.env.ADMIN_URL}`, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  });
+} else {
+  console.warn('ADMIN_URL is not set: secret admin route disabled');
+}
 
 // ═══════ ANTILOPAY CONFIG ═══════
 const ANTILOPAY_SECRET_ID = process.env.ANTILOPAY_SECRET_ID || '';

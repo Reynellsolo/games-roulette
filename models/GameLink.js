@@ -27,7 +27,14 @@ const gameLinkSchema = new mongoose.Schema({
 
   // Доплата ПОСЛЕ (перекрутка)
   respinRequested: { type: Boolean, default: false },
-  respinType: { type: String, enum: ['normal', 'premium', null], default: null },
+  respinType: {
+    type: String,
+    default: null,
+    validate: {
+      validator: (value) => value === null || ['normal', 'premium'].includes(value),
+      message: 'respinType must be normal, premium or null'
+    }
+  },
   respinPaid: { type: Boolean, default: false },
   respinOrderId: { type: String, default: null },
   respinTransactionId: { type: String, default: null },
