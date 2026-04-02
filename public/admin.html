@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
 <title>Admin Panel</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -570,7 +572,8 @@ tr:hover td{background:var(--bg-hover);}
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-const API='/games/api/admin';
+const PATH_PREFIX=window.location.pathname.startsWith('/games/')?'/games':'';
+const API=PATH_PREFIX+'/api/admin';
 let allLinks=[];
 let lastWaitingCount=-1;
 let currentLinksFilter='all';
@@ -895,7 +898,7 @@ function renderLinksTable(){
   else if(['starter','bronze','silver','gold','diamond'].includes(currentLinksFilter))filtered=filtered.filter(l=>l.tier===currentLinksFilter);
 
   const tbody=document.getElementById('links-tbody');
-  const baseUrl=window.location.origin+'/games/g/';
+  const baseUrl=window.location.origin+PATH_PREFIX+'/g/';
 
   tbody.innerHTML=filtered.slice(0,300).map(l=>{
     let st='<span style="color:var(--text-muted)">Свободна</span>';
