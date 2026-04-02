@@ -13,7 +13,11 @@ const GameLink = require('./models/GameLink');
 const ImportedOrder = require('./models/ImportedOrder');
 
 const app = express();
-app.set('trust proxy', process.env.TRUST_PROXY === '1');
+const trustProxyRaw = String(process.env.TRUST_PROXY || '').toLowerCase().trim();
+const trustProxyEnabled = trustProxyRaw
+  ? ['1', 'true', 'yes', 'on'].includes(trustProxyRaw)
+  : true; // production-friendly default for nginx/reverse-proxy setups
+app.set('trust proxy', trustProxyEnabled);
 const helmet = require('helmet');
 app.use(helmet({
   contentSecurityPolicy: false  // Отключаем CSP (разрешаем inline-скрипты)
