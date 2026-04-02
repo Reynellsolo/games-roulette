@@ -744,7 +744,8 @@ function renderWaitingTable(){
 
     const extras=[];
     const pay=paymentSummary(l);
-    if(l.boosted)extras.push('<span class="badge badge-boost">🔥 Буст</span>');
+    if(l.boosted||l.boostPaid)extras.push('<span class="badge badge-boost">🔥 Буст</span>');
+    if(l.spinCompleted && !l.excludeDuplicates)extras.push('<span class="badge badge-no">♻️ Без исключения повторов</span>');
     if(l.respinCount>0)extras.push(`<span class="badge badge-respin">🔄 ×${l.respinCount}</span>`);
     if(rt==='premium'&&isRespin)extras.push('<span class="badge badge-respin-premium">⭐ Буст</span>');
     if(l.oldKeyNeedsPickup)extras.push('<span class="badge badge-waiting">⚠ Забрать старый ключ</span>');

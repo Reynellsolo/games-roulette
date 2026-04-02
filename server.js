@@ -222,6 +222,7 @@ app.get('/api/link/:code', async (req, res) => {
           tier: link.tier,
           country: link.country,
           boosted: link.boosted,
+          boostPaid: link.boostPaid,
           excludeDuplicates: link.excludeDuplicates,
           steamProfileUrl: link.steamProfileUrl,
           steamId: link.steamId,
@@ -240,6 +241,7 @@ app.get('/api/link/:code', async (req, res) => {
           tier: link.tier,
           country: link.country,
           boosted: link.boosted,
+          boostPaid: link.boostPaid,
           excludeDuplicates: link.excludeDuplicates,
           steamProfileUrl: link.steamProfileUrl,
           steamId: link.steamId,
@@ -259,6 +261,7 @@ app.get('/api/link/:code', async (req, res) => {
       tier: link.tier,
       country: link.country,
       boosted: link.boosted || false,
+      boostPaid: link.boostPaid || false,
       excludeDuplicates: link.excludeDuplicates || false,
       respinRequested: link.respinRequested,
       respinType: link.respinType,
@@ -276,7 +279,7 @@ app.get('/api/link/:code', async (req, res) => {
 // ═══════ API: Прокрутка рулетки ═══════
 app.post('/api/spin', async (req, res) => {
   try {
-    const { code, steamProfileUrl, steamId, steamName, steamAvatar, country, excludeDuplicates } = req.body;
+    const { code, steamProfileUrl, steamId, steamName, steamAvatar, country, excludeDuplicates, boosted } = req.body;
 
     const link = await GameLink.findOne({ code });
     if (!link || !link.active) return res.json({ ok: false, error: 'Недействительная ссылка' });
@@ -295,6 +298,11 @@ app.post('/api/spin', async (req, res) => {
 
     link.spinCompleted = true;
     link.excludeDuplicates = excludeDuplicates || false;
+    if (boosted === true && !link.boosted) {
+      link.boosted = true;
+      link.boostPaid = true;
+      if (!link.boostAmount) link.boostAmount = TIER_PRICES[link.tier]?.boost || 0;
+    }
     link.steamProfileUrl = steamProfileUrl || null;
     link.steamId = steamId || null;
     link.steamName = steamName || null;
