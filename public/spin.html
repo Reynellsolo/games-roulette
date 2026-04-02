@@ -483,9 +483,15 @@ async function loadLink({preserveStep=false}={}){
     updatePrices(data.tier);
 
     if(data.spinCompleted){
-  // Проверяем, был ли оплачен респин (нужно заново крутить)
+  // Если вернулись с оплаты респина, но webhook ещё не применился — не показываем старый ключ
   const params = new URLSearchParams(window.location.search);
   if(params.get('respin_success')==='1'){
+    const respinReady = data.respinRequested || !data.keyAssigned || !data.spinCompleted;
+    if(!respinReady){
+      showStep('step-waiting');
+      setAutoRefresh(true);
+      return;
+    }
     updateUrlParam('respin_success', null);
     showStep('step-roulette');
     initRouletteStrip();

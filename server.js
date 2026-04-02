@@ -225,7 +225,10 @@ app.get('/api/link/:code', async (req, res) => {
           excludeDuplicates: link.excludeDuplicates,
           steamName: link.steamName,
           steamAvatar: link.steamAvatar,
-          respinCount: link.respinCount
+          respinCount: link.respinCount,
+          respinRequested: link.respinRequested,
+          respinType: link.respinType,
+          oldKeyNeedsPickup: link.oldKeyNeedsPickup
         });
       } else {
         return res.json({
@@ -237,7 +240,11 @@ app.get('/api/link/:code', async (req, res) => {
           boosted: link.boosted,
           excludeDuplicates: link.excludeDuplicates,
           steamName: link.steamName,
-          steamAvatar: link.steamAvatar
+          steamAvatar: link.steamAvatar,
+          respinRequested: link.respinRequested,
+          respinType: link.respinType,
+          respinCount: link.respinCount,
+          oldKeyNeedsPickup: link.oldKeyNeedsPickup
         });
       }
     }
@@ -247,7 +254,12 @@ app.get('/api/link/:code', async (req, res) => {
       spinCompleted: false,
       tier: link.tier,
       country: link.country,
-      boosted: link.boosted || false
+      boosted: link.boosted || false,
+      respinRequested: link.respinRequested,
+      respinType: link.respinType,
+      respinCount: link.respinCount,
+      steamName: link.steamName,
+      steamAvatar: link.steamAvatar
     });
   } catch (e) {
     res.status(500).json({ valid: false, error: 'Ошибка сервера' });
