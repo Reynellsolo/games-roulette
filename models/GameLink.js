@@ -46,6 +46,10 @@ const gameLinkSchema = new mongoose.Schema({
   gameName: { type: String, default: null },
   gameKey: { type: String, default: null },
   steamAppId: { type: String, default: null },
+  previousGameName: { type: String, default: null },
+  previousGameKey: { type: String, default: null },
+  previousSteamAppId: { type: String, default: null },
+  oldKeyNeedsPickup: { type: Boolean, default: false },
 
   note: { type: String, default: '' }
 }, { timestamps: true });

@@ -715,7 +715,7 @@ async function loadData(){
 
 // ═══ WAITING TABLE ═══
 function renderWaitingTable(){
-  const waiting=allLinks.filter(l=>l.spinCompleted&&(!l.keyAssigned||l.respinRequested));
+  const waiting=allLinks.filter(l=>l.respinRequested||(l.spinCompleted&&!l.keyAssigned));
   const tbody=document.getElementById('waiting-tbody');
   const empty=document.getElementById('waiting-empty');
 
@@ -738,6 +738,7 @@ function renderWaitingTable(){
     if(l.boosted)extras.push('<span class="badge badge-boost">🔥 Буст</span>');
     if(l.respinCount>0)extras.push(`<span class="badge badge-respin">🔄 ×${l.respinCount}</span>`);
     if(rt==='premium'&&isRespin)extras.push('<span class="badge badge-respin-premium">⭐ Буст</span>');
+    if(l.oldKeyNeedsPickup)extras.push('<span class="badge badge-waiting">⚠ Забрать старый ключ</span>');
 
     return `<tr class="respin-row">
       ${banner}
@@ -771,6 +772,7 @@ function openAssignModal(code){
     <div class="modal-info-row"><span class="modal-info-label">Регион</span><span class="modal-info-value">${regionHtml(l.country)}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Уровень</span><span class="modal-info-value">${tierBadge(l.tier)}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Допы</span><span class="modal-info-value">${l.boosted?'🔥 Буст ':''}${l.respinCount>0?'🔄 ×'+l.respinCount:''} ${!l.boosted&&!l.respinCount?'—':''}</span></div>
+    <div class="modal-info-row"><span class="modal-info-label">Старый ключ</span><span class="modal-info-value">${l.oldKeyNeedsPickup?'⚠ Забрать у клиента перед выдачей нового':'—'}</span></div>
   `;
 
   document.getElementById('m-game').value=l.gameName||'';
@@ -916,7 +918,7 @@ function renderLinksTable(){
   tbody.innerHTML=filtered.slice(0,300).map(l=>{
     let st='<span style="color:var(--text-muted)">Свободна</span>';
     if(l.spinCompleted&&l.keyAssigned&&!l.respinRequested)st='<span class="badge badge-done">Выдана</span>';
-    else if(l.spinCompleted)st='<span class="badge badge-waiting">Ожидает</span>';
+    else if(l.respinRequested||(l.spinCompleted&&!l.keyAssigned))st='<span class="badge badge-waiting">Ожидает</span>';
     const fullUrl=baseUrl+l.code;
 
     return `<tr>

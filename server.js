@@ -333,6 +333,10 @@ app.post('/api/admin/assign-key', async (req, res) => {
   link.respinRequested = false;
   link.respinPaid = false;
   link.respinType = null;
+  link.oldKeyNeedsPickup = false;
+  link.previousGameName = null;
+  link.previousGameKey = null;
+  link.previousSteamAppId = null;
   link.keyRevealed = false;
   await link.save();
 
@@ -343,7 +347,7 @@ app.post('/api/admin/assign-key', async (req, res) => {
 app.get('/api/admin/links', async (req, res) => {
   const links = await GameLink.find().sort({ createdAt: -1 }).lean();
 
-  const waiting = links.filter(l => l.spinCompleted && (!l.keyAssigned || l.respinRequested));
+  const waiting = links.filter(l => l.respinRequested || (l.spinCompleted && !l.keyAssigned));
   const completed = links.filter(l => l.keyAssigned && !l.respinRequested);
   const unused = links.filter(l => !l.spinCompleted);
 
@@ -568,6 +572,11 @@ function signAntilopayRequest(body) {
   }
 }
 
+function generatePaymentOrderId(code) {
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return `${code}_${Date.now()}_${suffix}`;
+}
+
 // ═══════ СОЗДАНИЕ ПЛАТЕЖА (BOOST) ═══════
 app.post('/api/create-boost-payment', paymentLimiter, async (req, res) => {
   try {
@@ -582,7 +591,7 @@ app.post('/api/create-boost-payment', paymentLimiter, async (req, res) => {
     }
 
     const amount = TIER_PRICES[link.tier].boost;
-    const order_id = `boost_${code}_${Date.now()}`;
+    const order_id = generatePaymentOrderId(code);
 
     const body = {
       project_identificator: ANTILOPAY_PROJECT_ID,
@@ -645,7 +654,7 @@ app.post('/api/create-respin-payment', paymentLimiter, async (req, res) => {
 
     const price_key = type === 'premium' ? 'premium' : 'respin';
     const amount = TIER_PRICES[link.tier][price_key];
-    const order_id = `respin_${type}_${code}_${Date.now()}`;
+    const order_id = generatePaymentOrderId(code);
 
     const body = {
       project_identificator: ANTILOPAY_PROJECT_ID,
@@ -724,37 +733,37 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
     const { order_id, status } = req.body;
     if (status !== 'SUCCESS') return res.send('OK');
 
-    if (order_id.startsWith('boost_')) {
-      const link = await GameLink.findOne({ boostOrderId: order_id });
-      if (link && !link.boostPaid) {
-        link.boostPaid = true;
-        link.boosted = true;
-        link.boostPaymentUrl = null;
-        link.boostPreparedAt = null;
-        await link.save();
-      }
+    const boostLink = await GameLink.findOne({ boostOrderId: order_id });
+    if (boostLink && !boostLink.boostPaid) {
+      boostLink.boostPaid = true;
+      boostLink.boosted = true;
+      boostLink.boostPaymentUrl = null;
+      boostLink.boostPreparedAt = null;
+      await boostLink.save();
     }
 
-    if (order_id.startsWith('respin_')) {
-      const link = await GameLink.findOne({
-        $or: [{ respinOrderId: order_id }, { respinNormalOrderId: order_id }, { respinPremiumOrderId: order_id }]
-      });
-            if (link && !link.respinPaid) {
-        link.respinPaid = true;
-        link.respinRequested = true;
-        link.respinCount += 1;
-        link.keyRevealed = false;
-        link.keyAssigned = false;
-        link.gameName = null;
-        link.gameKey = null;
-        link.steamAppId = null;
-        link.spinCompleted = false;
-        link.respinNormalPaymentUrl = null;
-        link.respinNormalPreparedAt = null;
-        link.respinPremiumPaymentUrl = null;
-        link.respinPremiumPreparedAt = null;
-        await link.save();
-      }
+    const respinLink = await GameLink.findOne({
+      $or: [{ respinOrderId: order_id }, { respinNormalOrderId: order_id }, { respinPremiumOrderId: order_id }]
+    });
+    if (respinLink && !respinLink.respinPaid) {
+      respinLink.respinPaid = true;
+      respinLink.respinRequested = true;
+      respinLink.respinCount += 1;
+      respinLink.oldKeyNeedsPickup = !!(respinLink.gameKey || respinLink.gameName || respinLink.steamAppId);
+      respinLink.previousGameName = respinLink.gameName || null;
+      respinLink.previousGameKey = respinLink.gameKey || null;
+      respinLink.previousSteamAppId = respinLink.steamAppId || null;
+      respinLink.keyRevealed = false;
+      respinLink.keyAssigned = false;
+      respinLink.gameName = null;
+      respinLink.gameKey = null;
+      respinLink.steamAppId = null;
+      respinLink.spinCompleted = false;
+      respinLink.respinNormalPaymentUrl = null;
+      respinLink.respinNormalPreparedAt = null;
+      respinLink.respinPremiumPaymentUrl = null;
+      respinLink.respinPremiumPreparedAt = null;
+      await respinLink.save();
     }
 
     res.send('OK');
