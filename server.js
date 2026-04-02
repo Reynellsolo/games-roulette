@@ -13,6 +13,11 @@ const GameLink = require('./models/GameLink');
 const ImportedOrder = require('./models/ImportedOrder');
 
 const app = express();
+const trustProxyRaw = String(process.env.TRUST_PROXY || '1').toLowerCase().trim();
+const trustProxySetting = /^\d+$/.test(trustProxyRaw)
+  ? Number(trustProxyRaw) // recommended for express-rate-limit (e.g. 1 hop nginx)
+  : (['true', 'yes', 'on'].includes(trustProxyRaw) ? true : false);
+app.set('trust proxy', trustProxySetting);
 const helmet = require('helmet');
 app.use(helmet({
   contentSecurityPolicy: false  // Отключаем CSP (разрешаем inline-скрипты)
@@ -40,7 +45,14 @@ setInterval(() => linkAttempts.clear(), 60000); // Очистка каждую �
 
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send('User-agent: *\nDisallow: /');
+});
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
@@ -146,6 +158,39 @@ app.post('/api/check-steam', steamCheckLimiter, async (req, res) => {
 app.get('/g/:code', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'spin.html'));
 });
+// Backward compatibility for old marketplace links
+app.get('/games/g/:code', (req, res) => {
+  res.redirect(302, `/g/${req.params.code}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`);
+});
+
+function normalizePathPrefix(prefix) {
+  if (!prefix) return '';
+  let normalized = String(prefix).trim();
+  if (!normalized.startsWith('/')) normalized = `/${normalized}`;
+  if (normalized.endsWith('/')) normalized = normalized.slice(0, -1);
+  return normalized === '/' ? '' : normalized;
+}
+
+function getPublicPathPrefix(req) {
+  const envPrefix = normalizePathPrefix(process.env.PUBLIC_PATH_PREFIX);
+  if (envPrefix) return envPrefix;
+  if (req.originalUrl.startsWith('/games/')) return '/games';
+  return '';
+}
+
+function getPublicBaseUrl(req) {
+  const hostBase = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  return `${hostBase}${getPublicPathPrefix(req)}`;
+}
+
+function adminAuth(req, res, next) {
+  const token = process.env.ADMIN_API_TOKEN;
+  if (!token) return next();
+  const provided = req.headers['x-admin-token'];
+  if (provided !== token) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  next();
+}
+app.use('/api/admin', adminAuth);
 
 // ═══════ API: Проверка ссылки ═══════
 app.get('/api/link/:code', async (req, res) => {
@@ -175,11 +220,17 @@ app.get('/api/link/:code', async (req, res) => {
           gameKey: link.keyRevealed ? link.gameKey : null,
           steamAppId: link.steamAppId,
           tier: link.tier,
+          country: link.country,
           boosted: link.boosted,
           excludeDuplicates: link.excludeDuplicates,
+          steamProfileUrl: link.steamProfileUrl,
+          steamId: link.steamId,
           steamName: link.steamName,
           steamAvatar: link.steamAvatar,
-          respinCount: link.respinCount
+          respinCount: link.respinCount,
+          respinRequested: link.respinRequested,
+          respinType: link.respinType,
+          oldKeyNeedsPickup: link.oldKeyNeedsPickup
         });
       } else {
         return res.json({
@@ -187,10 +238,17 @@ app.get('/api/link/:code', async (req, res) => {
           spinCompleted: true,
           keyAssigned: false,
           tier: link.tier,
+          country: link.country,
           boosted: link.boosted,
           excludeDuplicates: link.excludeDuplicates,
+          steamProfileUrl: link.steamProfileUrl,
+          steamId: link.steamId,
           steamName: link.steamName,
-          steamAvatar: link.steamAvatar
+          steamAvatar: link.steamAvatar,
+          respinRequested: link.respinRequested,
+          respinType: link.respinType,
+          respinCount: link.respinCount,
+          oldKeyNeedsPickup: link.oldKeyNeedsPickup
         });
       }
     }
@@ -199,7 +257,16 @@ app.get('/api/link/:code', async (req, res) => {
       valid: true,
       spinCompleted: false,
       tier: link.tier,
-      boosted: link.boosted || false
+      country: link.country,
+      boosted: link.boosted || false,
+      excludeDuplicates: link.excludeDuplicates || false,
+      respinRequested: link.respinRequested,
+      respinType: link.respinType,
+      respinCount: link.respinCount,
+      steamProfileUrl: link.steamProfileUrl,
+      steamId: link.steamId,
+      steamName: link.steamName,
+      steamAvatar: link.steamAvatar
     });
   } catch (e) {
     res.status(500).json({ valid: false, error: 'Ошибка сервера' });
@@ -256,7 +323,7 @@ for (let i = 0; i < (count || 1); i++) {
   try {
     const link = new GameLink({ code, tier, note: note || '' });
     await link.save();
-    links.push({ code, tier, url: `${process.env.BASE_URL}/games/g/${code}` });
+    links.push({ code, tier, url: `${getPublicBaseUrl(req)}/g/${code}` });
   } catch (e) {
     if (e.code === 11000) { // Duplicate key (коллизия, 1 на миллиард)
       i--; // Повторить итерацию
@@ -285,6 +352,13 @@ app.post('/api/admin/assign-key', async (req, res) => {
   link.respinRequested = false;
   link.respinPaid = false;
   link.respinType = null;
+  link.respinOverlayDismissed = false;
+  link.oldGameKey = null;
+  link.oldKeyWarningShown = false;
+  link.oldKeyNeedsPickup = false;
+  link.previousGameName = null;
+  link.previousGameKey = null;
+  link.previousSteamAppId = null;
   link.keyRevealed = false;
   await link.save();
 
@@ -295,7 +369,7 @@ app.post('/api/admin/assign-key', async (req, res) => {
 app.get('/api/admin/links', async (req, res) => {
   const links = await GameLink.find().sort({ createdAt: -1 }).lean();
 
-  const waiting = links.filter(l => l.spinCompleted && (!l.keyAssigned || l.respinRequested));
+  const waiting = links.filter(l => l.respinRequested || (l.spinCompleted && !l.keyAssigned));
   const completed = links.filter(l => l.keyAssigned && !l.respinRequested);
   const unused = links.filter(l => !l.spinCompleted);
 
@@ -319,6 +393,14 @@ app.get('/api/admin/links', async (req, res) => {
 // ═══════ ADMIN: Удалить ссылку ═══════
 app.delete('/api/admin/link/:code', async (req, res) => {
   await GameLink.deleteOne({ code: req.params.code });
+  res.json({ ok: true });
+});
+
+// ═══════ ADMIN: Скрыть оверлей респина ═══════
+app.post('/api/admin/dismiss-respin-overlay', async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.json({ ok: false, error: 'Code required' });
+  await GameLink.updateOne({ code }, { $set: { respinOverlayDismissed: true } });
   res.json({ ok: true });
 });
 
@@ -520,6 +602,11 @@ function signAntilopayRequest(body) {
   }
 }
 
+function generatePaymentOrderId(code) {
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return `${code}_${Date.now()}_${suffix}`;
+}
+
 // ═══════ СОЗДАНИЕ ПЛАТЕЖА (BOOST) ═══════
 app.post('/api/create-boost-payment', paymentLimiter, async (req, res) => {
   try {
@@ -534,16 +621,16 @@ app.post('/api/create-boost-payment', paymentLimiter, async (req, res) => {
     }
 
     const amount = TIER_PRICES[link.tier].boost;
-    const order_id = `boost_${code}_${Date.now()}`;
+    const order_id = generatePaymentOrderId(code);
 
     const body = {
       project_identificator: ANTILOPAY_PROJECT_ID,
       amount, order_id, currency: 'RUB',
-      product_name: `Повышенный шанс (${link.tier})`,
+      product_name: `Дополнительная опция (${link.tier})`,
       product_type: 'services',
-      description: `Повышение шанса на дорогую игру`,
-      success_url: `${process.env.BASE_URL}/games/g/${code}?boost_success=1`,
-      fail_url: `${process.env.BASE_URL}/games/g/${code}?boost_failed=1`,
+      description: 'Сервисная опция для цифрового товара',
+      success_url: `${getPublicBaseUrl(req)}/g/${code}?boost_success=1`,
+      fail_url: `${getPublicBaseUrl(req)}/g/${code}?boost_failed=1`,
       customer: { email: 'support@codenext.ru' },
     };
 
@@ -597,16 +684,16 @@ app.post('/api/create-respin-payment', paymentLimiter, async (req, res) => {
 
     const price_key = type === 'premium' ? 'premium' : 'respin';
     const amount = TIER_PRICES[link.tier][price_key];
-    const order_id = `respin_${type}_${code}_${Date.now()}`;
+    const order_id = generatePaymentOrderId(code);
 
     const body = {
       project_identificator: ANTILOPAY_PROJECT_ID,
       amount, order_id, currency: 'RUB',
-      product_name: type === 'premium' ? 'Перекрутка с бустом' : 'Перекрутка',
+      product_name: type === 'premium' ? 'Расширенная сервисная опция' : 'Сервисная опция',
       product_type: 'services',
-      description: type === 'premium' ? 'Перекрутка с повышенным шансом' : 'Перекрутка рулетки',
-      success_url: `${process.env.BASE_URL}/games/g/${code}?respin_success=1`,
-      fail_url: `${process.env.BASE_URL}/games/g/${code}?respin_failed=1`,
+      description: type === 'premium' ? 'Расширенная опция для цифрового товара' : 'Дополнительная опция для цифрового товара',
+      success_url: `${getPublicBaseUrl(req)}/g/${code}?respin_success=1`,
+      fail_url: `${getPublicBaseUrl(req)}/g/${code}?respin_failed=1`,
       customer: { email: 'support@codenext.ru' },
     };
 
@@ -652,6 +739,7 @@ app.post('/api/create-respin-payment', paymentLimiter, async (req, res) => {
 // ═══════ WEBHOOK ANTILOPAY ═══════
 app.post('/api/webhook/antilopay-games', async (req, res) => {
   try {
+    console.log('[WEBHOOK] Received:', JSON.stringify(req.body));
     // ═══════ Проверка подписи ═══════
     const receivedSign = req.headers['x-apay-sign'];
     if (!receivedSign) {
@@ -676,37 +764,52 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
     const { order_id, status } = req.body;
     if (status !== 'SUCCESS') return res.send('OK');
 
-    if (order_id.startsWith('boost_')) {
-      const link = await GameLink.findOne({ boostOrderId: order_id });
-      if (link && !link.boostPaid) {
-        link.boostPaid = true;
-        link.boosted = true;
-        link.boostPaymentUrl = null;
-        link.boostPreparedAt = null;
-        await link.save();
-      }
+    const boostLink = await GameLink.findOne({ boostOrderId: order_id });
+    if (boostLink && !boostLink.boostPaid) {
+      console.log('[WEBHOOK BOOST] Matched link:', boostLink.code);
+      boostLink.boostPaid = true;
+      boostLink.boosted = true;
+      boostLink.boostAmount = TIER_PRICES[boostLink.tier]?.boost || 0;
+      boostLink.boostPaymentUrl = null;
+      boostLink.boostPreparedAt = null;
+      await boostLink.save();
     }
 
-    if (order_id.startsWith('respin_')) {
-      const link = await GameLink.findOne({
-        $or: [{ respinOrderId: order_id }, { respinNormalOrderId: order_id }, { respinPremiumOrderId: order_id }]
+    const respinLink = await GameLink.findOne({
+      $or: [{ respinOrderId: order_id }, { respinNormalOrderId: order_id }, { respinPremiumOrderId: order_id }]
+    });
+    if (respinLink && !respinLink.respinPaid) {
+      console.log('[WEBHOOK RESPIN] Matched link:', respinLink.code);
+      respinLink.respinPaid = true;
+      respinLink.respinRequested = true;
+      respinLink.respinCount += 1;
+      const paidType = order_id === respinLink.respinPremiumOrderId ? 'premium' : 'normal';
+      const paidAmount = TIER_PRICES[respinLink.tier]?.[paidType === 'premium' ? 'premium' : 'respin'] || 0;
+      respinLink.respinHistory.push({ type: paidType, amount: paidAmount, paidAt: new Date() });
+      respinLink.respinOverlayDismissed = false;
+      respinLink.oldGameKey = respinLink.gameKey || null;
+      respinLink.oldKeyWarningShown = !!respinLink.gameKey;
+      respinLink.oldKeyNeedsPickup = !!(respinLink.gameKey || respinLink.gameName || respinLink.steamAppId);
+      respinLink.previousGameName = respinLink.gameName || null;
+      respinLink.previousGameKey = respinLink.gameKey || null;
+      respinLink.previousSteamAppId = respinLink.steamAppId || null;
+      respinLink.keyRevealed = false;
+      respinLink.keyAssigned = false;
+      respinLink.gameName = null;
+      respinLink.gameKey = null;
+      respinLink.steamAppId = null;
+      respinLink.spinCompleted = false;
+      respinLink.respinNormalPaymentUrl = null;
+      respinLink.respinNormalPreparedAt = null;
+      respinLink.respinPremiumPaymentUrl = null;
+      respinLink.respinPremiumPreparedAt = null;
+      console.log('[WEBHOOK RESPIN] Before save:', {
+        code: respinLink.code,
+        spinCompleted: respinLink.spinCompleted,
+        keyAssigned: respinLink.keyAssigned,
+        respinRequested: respinLink.respinRequested
       });
-            if (link && !link.respinPaid) {
-        link.respinPaid = true;
-        link.respinRequested = true;
-        link.respinCount += 1;
-        link.keyRevealed = false;
-        link.keyAssigned = false;
-        link.gameName = null;
-        link.gameKey = null;
-        link.steamAppId = null;
-        link.spinCompleted = false;
-        link.respinNormalPaymentUrl = null;
-        link.respinNormalPreparedAt = null;
-        link.respinPremiumPaymentUrl = null;
-        link.respinPremiumPreparedAt = null;
-        await link.save();
-      }
+      await respinLink.save();
     }
 
     res.send('OK');
