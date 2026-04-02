@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const importedOrderSchema = new mongoose.Schema({
   gameName: { type: String, default: '' },
   gameKey: { type: String, default: '' },
-  orderNumber: { type: String, default: null },
+  orderNumber: { type: String, default: null, set: v => (v === '' ? null : v) },
   customerName: { type: String, default: '' },
 }, { timestamps: true });
 
