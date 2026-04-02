@@ -312,7 +312,9 @@ app.post('/api/spin', async (req, res) => {
 // ═══════ ADMIN: Генерация ссылок ═══════
 app.post('/api/admin/generate-links', async (req, res) => {
   const { count, tier, note } = req.body;
-  const normalizedCount = Number.isInteger(count) ? count : Number.parseInt(count, 10);
+  const hasCount = count !== undefined && count !== null && String(count).trim() !== '';
+  const parsedCount = Number.isInteger(count) ? count : Number.parseInt(count, 10);
+  const normalizedCount = hasCount ? parsedCount : 1;
 
   if (!tier || !['starter', 'bronze', 'silver', 'gold', 'diamond'].includes(tier)) {
     return res.json({ ok: false, error: 'Укажите корректный tier' });
