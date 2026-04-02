@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
 <title>Admin Panel</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -570,7 +572,21 @@ tr:hover td{background:var(--bg-hover);}
 <div class="toast-container" id="toast-container"></div>
 
 <script>
-const API='/games/api/admin';
+const PATH_PREFIX=window.location.pathname.startsWith('/games/')?'/games':'';
+const API_CANDIDATES=[PATH_PREFIX, PATH_PREFIX==='/games'?'':'/games', '']
+  .map(p=>p.trim())
+  .filter((p,i,a)=>a.indexOf(p)===i)
+  .map(p=>`${p}/api/admin`);
+
+async function apiFetch(path, options){
+  let last404=null;
+  for(const base of API_CANDIDATES){
+    const resp=await fetch(base+path, options);
+    if(resp.status!==404) return resp;
+    last404=resp;
+  }
+  return last404;
+}
 let allLinks=[];
 let lastWaitingCount=-1;
 let currentLinksFilter='all';
@@ -683,7 +699,7 @@ function switchSection(name){
 // ═══ LOAD DATA ═══
 async function loadData(){
   try{
-    const r=await fetch(API+'/links');
+    const r=await apiFetch('/links');
     const data=await r.json();
     if(!data.ok)return;
     allLinks=data.links;
@@ -699,7 +715,7 @@ async function loadData(){
 
 // ═══ WAITING TABLE ═══
 function renderWaitingTable(){
-  const waiting=allLinks.filter(l=>l.spinCompleted&&(!l.keyAssigned||l.respinRequested));
+  const waiting=allLinks.filter(l=>l.respinRequested||(l.spinCompleted&&!l.keyAssigned));
   const tbody=document.getElementById('waiting-tbody');
   const empty=document.getElementById('waiting-empty');
 
@@ -722,6 +738,7 @@ function renderWaitingTable(){
     if(l.boosted)extras.push('<span class="badge badge-boost">🔥 Буст</span>');
     if(l.respinCount>0)extras.push(`<span class="badge badge-respin">🔄 ×${l.respinCount}</span>`);
     if(rt==='premium'&&isRespin)extras.push('<span class="badge badge-respin-premium">⭐ Буст</span>');
+    if(l.oldKeyNeedsPickup)extras.push('<span class="badge badge-waiting">⚠ Забрать старый ключ</span>');
 
     return `<tr class="respin-row">
       ${banner}
@@ -755,6 +772,7 @@ function openAssignModal(code){
     <div class="modal-info-row"><span class="modal-info-label">Регион</span><span class="modal-info-value">${regionHtml(l.country)}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Уровень</span><span class="modal-info-value">${tierBadge(l.tier)}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Допы</span><span class="modal-info-value">${l.boosted?'🔥 Буст ':''}${l.respinCount>0?'🔄 ×'+l.respinCount:''} ${!l.boosted&&!l.respinCount?'—':''}</span></div>
+    <div class="modal-info-row"><span class="modal-info-label">Старый ключ</span><span class="modal-info-value">${l.oldKeyNeedsPickup?'⚠ Забрать у клиента перед выдачей нового':'—'}</span></div>
   `;
 
   document.getElementById('m-game').value=l.gameName||'';
@@ -806,7 +824,7 @@ async function doModalSearch(q){
   }
 
   try{
-    const r=await fetch(API+'/search?q='+encodeURIComponent(norm));
+    const r=await apiFetch('/search?q='+encodeURIComponent(norm));
     const data=await r.json();
 
     if(!data.ok||!data.results.length){
@@ -840,7 +858,7 @@ document.getElementById('btn-modal-assign').addEventListener('click',async()=>{
   btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span> Сохраняем...';
 
   try{
-    const r=await fetch(API+'/assign-key',{
+    const r=await apiFetch('/assign-key',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({code:currentAssignCode,gameName,gameKey,steamAppId:steamAppId||null,customerName:customerName||null,orderNumber:orderNumber||null})
     });
@@ -860,7 +878,7 @@ document.getElementById('btn-generate').addEventListener('click',async()=>{
   btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span>';
 
   try{
-    const r=await fetch(API+'/generate-links',{
+    const r=await apiFetch('/generate-links',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({count,tier})
     });
@@ -895,12 +913,12 @@ function renderLinksTable(){
   else if(['starter','bronze','silver','gold','diamond'].includes(currentLinksFilter))filtered=filtered.filter(l=>l.tier===currentLinksFilter);
 
   const tbody=document.getElementById('links-tbody');
-  const baseUrl=window.location.origin+'/games/g/';
+  const baseUrl=window.location.origin+PATH_PREFIX+'/g/';
 
   tbody.innerHTML=filtered.slice(0,300).map(l=>{
     let st='<span style="color:var(--text-muted)">Свободна</span>';
     if(l.spinCompleted&&l.keyAssigned&&!l.respinRequested)st='<span class="badge badge-done">Выдана</span>';
-    else if(l.spinCompleted)st='<span class="badge badge-waiting">Ожидает</span>';
+    else if(l.respinRequested||(l.spinCompleted&&!l.keyAssigned))st='<span class="badge badge-waiting">Ожидает</span>';
     const fullUrl=baseUrl+l.code;
 
     return `<tr>
@@ -915,7 +933,7 @@ function renderLinksTable(){
 
 function deleteLink(code){
   showConfirm('Удалить эту ссылку?',async()=>{
-    try{await fetch(API+'/link/'+code,{method:'DELETE'});showToast('🗑 Удалено');loadData();}
+    try{await apiFetch('/link/'+code,{method:'DELETE'});showToast('🗑 Удалено');loadData();}
     catch(e){showToast('Ошибка','error');}
   });
 }
@@ -934,7 +952,7 @@ document.getElementById('history-search').addEventListener('input',()=>renderHis
 
 async function loadHistory(){
   try{
-    const r=await fetch(API+'/history');
+    const r=await apiFetch('/history');
     const data=await r.json();
     if(data.ok){historyData=data;renderHistory();}
   }catch(e){}
@@ -1014,7 +1032,7 @@ async function handleImport(file){
   importFileData=file;
   const fd=new FormData();fd.append('file',file);
   try{
-    const r=await fetch(API+'/import',{method:'POST',body:fd});
+    const r=await apiFetch('/import',{method:'POST',body:fd});
     const data=await r.json();
     if(data.ok&&data.preview){
       document.getElementById('import-total').textContent=data.totalRows;
@@ -1030,7 +1048,7 @@ document.getElementById('btn-import-confirm').addEventListener('click',async()=>
   btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span>';
   const fd=new FormData();fd.append('file',importFileData);
   try{
-    const r=await fetch(API+'/import-confirm',{method:'POST',body:fd});
+    const r=await apiFetch('/import-confirm',{method:'POST',body:fd});
     const data=await r.json();
     if(data.ok){showToast(`✅ ${data.imported} записей импортировано`);document.getElementById('import-preview').style.display='none';importFileData=null;}
     else showToast(data.error||'Ошибка','error');
