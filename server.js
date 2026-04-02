@@ -159,9 +159,24 @@ app.get('/games/g/:code', (req, res) => {
   res.redirect(302, `/g/${req.params.code}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`);
 });
 
+function normalizePathPrefix(prefix) {
+  if (!prefix) return '';
+  let normalized = String(prefix).trim();
+  if (!normalized.startsWith('/')) normalized = `/${normalized}`;
+  if (normalized.endsWith('/')) normalized = normalized.slice(0, -1);
+  return normalized === '/' ? '' : normalized;
+}
+
+function getPublicPathPrefix(req) {
+  const envPrefix = normalizePathPrefix(process.env.PUBLIC_PATH_PREFIX);
+  if (envPrefix) return envPrefix;
+  if (req.originalUrl.startsWith('/games/')) return '/games';
+  return '';
+}
+
 function getPublicBaseUrl(req) {
-  if (process.env.BASE_URL) return process.env.BASE_URL;
-  return `${req.protocol}://${req.get('host')}`;
+  const hostBase = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  return `${hostBase}${getPublicPathPrefix(req)}`;
 }
 
 function adminAuth(req, res, next) {
@@ -568,9 +583,9 @@ app.post('/api/create-boost-payment', paymentLimiter, async (req, res) => {
     const body = {
       project_identificator: ANTILOPAY_PROJECT_ID,
       amount, order_id, currency: 'RUB',
-      product_name: `Повышенный шанс (${link.tier})`,
+      product_name: `Дополнительная опция (${link.tier})`,
       product_type: 'services',
-      description: `Повышение шанса на дорогую игру`,
+      description: 'Сервисная опция для цифрового товара',
       success_url: `${getPublicBaseUrl(req)}/g/${code}?boost_success=1`,
       fail_url: `${getPublicBaseUrl(req)}/g/${code}?boost_failed=1`,
       customer: { email: 'support@codenext.ru' },
@@ -631,9 +646,9 @@ app.post('/api/create-respin-payment', paymentLimiter, async (req, res) => {
     const body = {
       project_identificator: ANTILOPAY_PROJECT_ID,
       amount, order_id, currency: 'RUB',
-      product_name: type === 'premium' ? 'Перекрутка с бустом' : 'Перекрутка',
+      product_name: type === 'premium' ? 'Расширенная сервисная опция' : 'Сервисная опция',
       product_type: 'services',
-      description: type === 'premium' ? 'Перекрутка с повышенным шансом' : 'Перекрутка рулетки',
+      description: type === 'premium' ? 'Расширенная опция для цифрового товара' : 'Дополнительная опция для цифрового товара',
       success_url: `${getPublicBaseUrl(req)}/g/${code}?respin_success=1`,
       fail_url: `${getPublicBaseUrl(req)}/g/${code}?respin_failed=1`,
       customer: { email: 'support@codenext.ru' },
