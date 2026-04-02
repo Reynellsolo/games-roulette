@@ -895,20 +895,26 @@ document.getElementById('btn-generate').addEventListener('click',async()=>{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({count,tier})
     });
-    const data=await r.json();
-    if(data.ok){
-      const list=document.getElementById('gen-links-list');
-      list.innerHTML=data.links.map(l=>`<div class="gen-link-item" onclick="copyText('${l.url}')" title="Нажмите чтобы скопировать"><span style="flex:1">${l.url}</span><button class="copy-btn" onclick="event.stopPropagation();copyText('${l.url}')">📋</button></div>`).join('');
-      document.getElementById('gen-result').style.display='block';
-      document.getElementById('btn-copy-all').onclick=()=>copyText(data.links.map(l=>l.url).join('\n'));
-      document.getElementById('btn-export-txt').onclick=()=>{
-        const b=new Blob([data.links.map(l=>l.url).join('\n')],{type:'text/plain'});
-        const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`links_${tier}_${count}.txt`;a.click();
-      };
-      showToast(`✅ ${data.links.length} ссылок создано`);loadData();
+    const data=await r.json().catch(()=>({ok:false,error:`HTTP ${r.status}`}));
+    if(!r.ok || !data.ok){
+      showToast(data.error||`Ошибка генерации (${r.status})`,'error');
+      return;
     }
-  }catch(e){showToast('Ошибка','error');}
-  btn.disabled=false;btn.textContent='Сгенерировать';
+
+    const list=document.getElementById('gen-links-list');
+    list.innerHTML=data.links.map(l=>`<div class="gen-link-item" onclick="copyText('${l.url}')" title="Нажмите чтобы скопировать"><span style="flex:1">${l.url}</span><button class="copy-btn" onclick="event.stopPropagation();copyText('${l.url}')">📋</button></div>`).join('');
+    document.getElementById('gen-result').style.display='block';
+    document.getElementById('btn-copy-all').onclick=()=>copyText(data.links.map(l=>l.url).join('\n'));
+    document.getElementById('btn-export-txt').onclick=()=>{
+      const b=new Blob([data.links.map(l=>l.url).join('\n')],{type:'text/plain'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`links_${tier}_${count}.txt`;a.click();
+    };
+    showToast(`✅ ${data.links.length} ссылок создано`);loadData();
+  }catch(e){
+    showToast('Ошибка соединения при генерации','error');
+  }finally{
+    btn.disabled=false;btn.textContent='Сгенерировать';
+  }
 });
 
 // ═══ ALL LINKS ═══
