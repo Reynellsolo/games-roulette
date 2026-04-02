@@ -13,6 +13,7 @@ const GameLink = require('./models/GameLink');
 const ImportedOrder = require('./models/ImportedOrder');
 
 const app = express();
+app.set('trust proxy', process.env.TRUST_PROXY === '1');
 const helmet = require('helmet');
 app.use(helmet({
   contentSecurityPolicy: false  // Отключаем CSP (разрешаем inline-скрипты)
@@ -40,7 +41,14 @@ setInterval(() => linkAttempts.clear(), 60000); // Очистка каждую �
 
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send('User-agent: *\nDisallow: /');
+});
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
@@ -146,6 +154,24 @@ app.post('/api/check-steam', steamCheckLimiter, async (req, res) => {
 app.get('/g/:code', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'spin.html'));
 });
+// Backward compatibility for old marketplace links
+app.get('/games/g/:code', (req, res) => {
+  res.redirect(302, `/g/${req.params.code}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`);
+});
+
+function getPublicBaseUrl(req) {
+  if (process.env.BASE_URL) return process.env.BASE_URL;
+  return `${req.protocol}://${req.get('host')}`;
+}
+
+function adminAuth(req, res, next) {
+  const token = process.env.ADMIN_API_TOKEN;
+  if (!token) return next();
+  const provided = req.headers['x-admin-token'];
+  if (provided !== token) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  next();
+}
+app.use('/api/admin', adminAuth);
 
 // ═══════ API: Проверка ссылки ═══════
 app.get('/api/link/:code', async (req, res) => {
@@ -175,6 +201,7 @@ app.get('/api/link/:code', async (req, res) => {
           gameKey: link.keyRevealed ? link.gameKey : null,
           steamAppId: link.steamAppId,
           tier: link.tier,
+          country: link.country,
           boosted: link.boosted,
           excludeDuplicates: link.excludeDuplicates,
           steamName: link.steamName,
@@ -187,6 +214,7 @@ app.get('/api/link/:code', async (req, res) => {
           spinCompleted: true,
           keyAssigned: false,
           tier: link.tier,
+          country: link.country,
           boosted: link.boosted,
           excludeDuplicates: link.excludeDuplicates,
           steamName: link.steamName,
@@ -199,6 +227,7 @@ app.get('/api/link/:code', async (req, res) => {
       valid: true,
       spinCompleted: false,
       tier: link.tier,
+      country: link.country,
       boosted: link.boosted || false
     });
   } catch (e) {
@@ -256,7 +285,7 @@ for (let i = 0; i < (count || 1); i++) {
   try {
     const link = new GameLink({ code, tier, note: note || '' });
     await link.save();
-    links.push({ code, tier, url: `${process.env.BASE_URL}/games/g/${code}` });
+    links.push({ code, tier, url: `${getPublicBaseUrl(req)}/g/${code}` });
   } catch (e) {
     if (e.code === 11000) { // Duplicate key (коллизия, 1 на миллиард)
       i--; // Повторить итерацию
@@ -542,8 +571,8 @@ app.post('/api/create-boost-payment', paymentLimiter, async (req, res) => {
       product_name: `Повышенный шанс (${link.tier})`,
       product_type: 'services',
       description: `Повышение шанса на дорогую игру`,
-      success_url: `${process.env.BASE_URL}/games/g/${code}?boost_success=1`,
-      fail_url: `${process.env.BASE_URL}/games/g/${code}?boost_failed=1`,
+      success_url: `${getPublicBaseUrl(req)}/g/${code}?boost_success=1`,
+      fail_url: `${getPublicBaseUrl(req)}/g/${code}?boost_failed=1`,
       customer: { email: 'support@codenext.ru' },
     };
 
@@ -605,8 +634,8 @@ app.post('/api/create-respin-payment', paymentLimiter, async (req, res) => {
       product_name: type === 'premium' ? 'Перекрутка с бустом' : 'Перекрутка',
       product_type: 'services',
       description: type === 'premium' ? 'Перекрутка с повышенным шансом' : 'Перекрутка рулетки',
-      success_url: `${process.env.BASE_URL}/games/g/${code}?respin_success=1`,
-      fail_url: `${process.env.BASE_URL}/games/g/${code}?respin_failed=1`,
+      success_url: `${getPublicBaseUrl(req)}/g/${code}?respin_success=1`,
+      fail_url: `${getPublicBaseUrl(req)}/g/${code}?respin_failed=1`,
       customer: { email: 'support@codenext.ru' },
     };
 
