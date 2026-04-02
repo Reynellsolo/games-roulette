@@ -778,13 +778,20 @@ function openAssignModal(code){
   const av=l.steamAvatar?`<img class="avatar" src="${l.steamAvatar}" style="width:30px;height:30px;">`:'';
   const pay=paymentSummary(l);
   const respinDetails=pay.history.map(r=>`${r.type==='premium'?'premium':'normal'}: ${r.amount||0}₽`).join(', ')||'—';
+  const modalExtras=[];
+  if(l.boosted||l.boostPaid) modalExtras.push('<span class="badge badge-boost">🔥 Буст</span>');
+  modalExtras.push(l.excludeDuplicates
+    ?'<span class="badge badge-exclude">✓ С исключением повторов</span>'
+    :'<span class="badge badge-no">♻️ Без исключения повторов</span>');
+  if(l.respinCount>0) modalExtras.push(`<span class="badge badge-respin">🔄 ×${l.respinCount}</span>`);
+  if(l.respinType==='premium'&&l.respinRequested) modalExtras.push('<span class="badge badge-respin-premium">⭐ Респин с бустом</span>');
 
   document.getElementById('modal-info').innerHTML=`
     <div class="modal-info-row"><span class="modal-info-label">Steam профиль</span><span class="modal-info-value">${steamLinkHtml}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Никнейм</span><span class="modal-info-value">${av} ${l.steamName||'—'}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Регион</span><span class="modal-info-value">${regionHtml(l.country)}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Уровень</span><span class="modal-info-value">${tierBadge(l.tier)}</span></div>
-    <div class="modal-info-row"><span class="modal-info-label">Допы</span><span class="modal-info-value">${l.boosted?'🔥 Буст ':''}${l.respinCount>0?'🔄 ×'+l.respinCount:''} ${!l.boosted&&!l.respinCount?'—':''}</span></div>
+    <div class="modal-info-row"><span class="modal-info-label">Допы</span><span class="modal-info-value">${modalExtras.join(' ')}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Оплаты</span><span class="modal-info-value">Boost: ${pay.boost}₽ · Respin: ${respinDetails} · Итого: ${pay.total}₽</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Старый ключ</span><span class="modal-info-value">${l.oldKeyNeedsPickup?'⚠ Забрать у клиента перед выдачей нового':'—'}</span></div>
   `;

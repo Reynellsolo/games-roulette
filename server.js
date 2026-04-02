@@ -630,6 +630,34 @@ function generatePaymentOrderId(code) {
   return `${code}_${Date.now()}_${suffix}`;
 }
 
+function applyRespinResetState(link, paidType = 'normal') {
+  const amountKey = paidType === 'premium' ? 'premium' : 'respin';
+  const paidAmount = TIER_PRICES[link.tier]?.[amountKey] || 0;
+
+  link.respinPaid = true;
+  link.respinRequested = true;
+  link.respinCount += 1;
+  link.respinType = paidType;
+  link.respinHistory.push({ type: paidType, amount: paidAmount, paidAt: new Date() });
+  link.respinOverlayDismissed = false;
+  link.oldGameKey = link.gameKey || null;
+  link.oldKeyWarningShown = !!link.gameKey;
+  link.oldKeyNeedsPickup = !!(link.gameKey || link.gameName || link.steamAppId);
+  link.previousGameName = link.gameName || null;
+  link.previousGameKey = link.gameKey || null;
+  link.previousSteamAppId = link.steamAppId || null;
+  link.keyRevealed = false;
+  link.keyAssigned = false;
+  link.gameName = null;
+  link.gameKey = null;
+  link.steamAppId = null;
+  link.spinCompleted = false;
+  link.respinNormalPaymentUrl = null;
+  link.respinNormalPreparedAt = null;
+  link.respinPremiumPaymentUrl = null;
+  link.respinPremiumPreparedAt = null;
+}
+
 // ═══════ СОЗДАНИЕ ПЛАТЕЖА (BOOST) ═══════
 app.post('/api/create-boost-payment', paymentLimiter, async (req, res) => {
   try {
@@ -759,6 +787,31 @@ app.post('/api/create-respin-payment', paymentLimiter, async (req, res) => {
   }
 });
 
+// ═══════ FALLBACK: пометить успешную перекрутку после возврата со страницы оплаты ═══════
+app.post('/api/respin-success-fallback', async (req, res) => {
+  try {
+    const { code, type } = req.body;
+    const link = await GameLink.findOne({ code });
+    if (!link || !link.active || !link.keyAssigned || link.keyRevealed) {
+      return res.json({ ok: false, error: 'Недоступно' });
+    }
+    if (link.respinRequested || !link.respinType) return res.json({ ok: true, already: true });
+
+    const paidType = type === 'premium' ? 'premium' : 'normal';
+    const hasPreparedOrder = paidType === 'premium'
+      ? !!link.respinPremiumOrderId
+      : !!link.respinNormalOrderId;
+    if (!hasPreparedOrder) return res.json({ ok: false, error: 'Платёж не найден' });
+
+    applyRespinResetState(link, paidType);
+    await link.save();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Respin fallback error:', e);
+    res.status(500).json({ ok: false, error: 'Ошибка сервера' });
+  }
+});
+
 // ═══════ WEBHOOK ANTILOPAY ═══════
 app.post('/api/webhook/antilopay-games', async (req, res) => {
   try {
@@ -803,29 +856,8 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
     });
     if (respinLink && !respinLink.respinPaid) {
       console.log('[WEBHOOK RESPIN] Matched link:', respinLink.code);
-      respinLink.respinPaid = true;
-      respinLink.respinRequested = true;
-      respinLink.respinCount += 1;
       const paidType = order_id === respinLink.respinPremiumOrderId ? 'premium' : 'normal';
-      const paidAmount = TIER_PRICES[respinLink.tier]?.[paidType === 'premium' ? 'premium' : 'respin'] || 0;
-      respinLink.respinHistory.push({ type: paidType, amount: paidAmount, paidAt: new Date() });
-      respinLink.respinOverlayDismissed = false;
-      respinLink.oldGameKey = respinLink.gameKey || null;
-      respinLink.oldKeyWarningShown = !!respinLink.gameKey;
-      respinLink.oldKeyNeedsPickup = !!(respinLink.gameKey || respinLink.gameName || respinLink.steamAppId);
-      respinLink.previousGameName = respinLink.gameName || null;
-      respinLink.previousGameKey = respinLink.gameKey || null;
-      respinLink.previousSteamAppId = respinLink.steamAppId || null;
-      respinLink.keyRevealed = false;
-      respinLink.keyAssigned = false;
-      respinLink.gameName = null;
-      respinLink.gameKey = null;
-      respinLink.steamAppId = null;
-      respinLink.spinCompleted = false;
-      respinLink.respinNormalPaymentUrl = null;
-      respinLink.respinNormalPreparedAt = null;
-      respinLink.respinPremiumPaymentUrl = null;
-      respinLink.respinPremiumPreparedAt = null;
+      applyRespinResetState(respinLink, paidType);
       console.log('[WEBHOOK RESPIN] Before save:', {
         code: respinLink.code,
         spinCompleted: respinLink.spinCompleted,

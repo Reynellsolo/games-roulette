@@ -347,6 +347,7 @@ let userOwnedAppIds=[];
 let userOwnedGameNames=[];
 let uiState={step:'step-mode',spinAnimating:false};
 let boostedSelected=false;
+let respinFallbackTried=false;
 const PATH_PREFIX=window.location.pathname.startsWith('/games/')?'/games':'';
 const API_CANDIDATES=[PATH_PREFIX, PATH_PREFIX==='/games'?'':'/games', '']
   .map(p=>p.trim())
@@ -514,10 +515,19 @@ async function loadLink({preserveStep=false}={}){
   if(params.get('respin_success')==='1'){
     const respinReady = data.respinRequested || !data.keyAssigned || !data.spinCompleted;
     if(!respinReady){
+      if(!respinFallbackTried){
+        respinFallbackTried=true;
+        apiFetch('/respin-success-fallback',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({code:linkCode,type:(history.state&&history.state.pendingPayment)==='premium'?'premium':'normal'})
+        }).catch(()=>{});
+      }
       showStep('step-waiting');
       setAutoRefresh(true);
       return;
     }
+    respinFallbackTried=false;
     updateUrlParam('respin_success', null);
     restoreSavedChoices(data);
     if(data.excludeDuplicates || data.steamId) runAnalysisExclude(); else runAnalysisSimple();
