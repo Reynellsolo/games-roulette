@@ -472,6 +472,25 @@ function updatePrices(tier){
   document.getElementById('respin-boost-price').textContent=p.premium+' ₽';
 }
 
+function restoreSavedChoices(data){
+  if(!data) return;
+  if(data.country) selectedRegion=data.country;
+  if(data.excludeDuplicates){
+    selectedMode='exclude';
+    if(data.steamId){
+      steamVerified=true;
+      steamData={
+        steamId:data.steamId,
+        steamName:data.steamName||'Steam User',
+        steamAvatar:data.steamAvatar||'',
+        gamesCount:data.gamesCount||0
+      };
+    }
+  }else{
+    selectedMode='normal';
+  }
+}
+
 async function loadLink({preserveStep=false}={}){
   try{
     const r=await apiFetch(`/link/${linkCode}`,{cache:'no-store'});
@@ -505,15 +524,28 @@ async function loadLink({preserveStep=false}={}){
       setAutoRefresh(false);
       const params=new URLSearchParams(window.location.search);
       if(params.get('boost_success')==='1'){
-  updateUrlParam('boost_success', null);
-  // selectedMode мог потеряться — показываем анализ с проверкой Steam если есть steamData
-  if(steamData || steamVerified) runAnalysisExclude(); else runAnalysisSimple();
-  return;
-}
+        updateUrlParam('boost_success', null);
+        restoreSavedChoices(data);
+        if(data.excludeDuplicates || data.steamId) runAnalysisExclude(); else runAnalysisSimple();
+        return;
+      }
       if(params.get('respin_success')==='1'){
         updateUrlParam('respin_success', null);
-        showStep('step-roulette');
-        initRouletteStrip();
+        restoreSavedChoices(data);
+        if(selectedRegion){
+          showStep('step-boost');
+        }else{
+          showStep('step-region');
+        }
+        return;
+      }
+      if(data.respinRequested){
+        restoreSavedChoices(data);
+        if(selectedRegion){
+          showStep('step-boost');
+        }else{
+          showStep('step-region');
+        }
         return;
       }
       if(!preserveStep || !document.getElementById(uiState.step)?.classList.contains('active')){

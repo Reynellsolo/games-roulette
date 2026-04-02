@@ -223,6 +223,8 @@ app.get('/api/link/:code', async (req, res) => {
           country: link.country,
           boosted: link.boosted,
           excludeDuplicates: link.excludeDuplicates,
+          steamProfileUrl: link.steamProfileUrl,
+          steamId: link.steamId,
           steamName: link.steamName,
           steamAvatar: link.steamAvatar,
           respinCount: link.respinCount,
@@ -239,6 +241,8 @@ app.get('/api/link/:code', async (req, res) => {
           country: link.country,
           boosted: link.boosted,
           excludeDuplicates: link.excludeDuplicates,
+          steamProfileUrl: link.steamProfileUrl,
+          steamId: link.steamId,
           steamName: link.steamName,
           steamAvatar: link.steamAvatar,
           respinRequested: link.respinRequested,
@@ -255,9 +259,12 @@ app.get('/api/link/:code', async (req, res) => {
       tier: link.tier,
       country: link.country,
       boosted: link.boosted || false,
+      excludeDuplicates: link.excludeDuplicates || false,
       respinRequested: link.respinRequested,
       respinType: link.respinType,
       respinCount: link.respinCount,
+      steamProfileUrl: link.steamProfileUrl,
+      steamId: link.steamId,
       steamName: link.steamName,
       steamAvatar: link.steamAvatar
     });
@@ -345,6 +352,9 @@ app.post('/api/admin/assign-key', async (req, res) => {
   link.respinRequested = false;
   link.respinPaid = false;
   link.respinType = null;
+  link.respinOverlayDismissed = false;
+  link.oldGameKey = null;
+  link.oldKeyWarningShown = false;
   link.oldKeyNeedsPickup = false;
   link.previousGameName = null;
   link.previousGameKey = null;
@@ -383,6 +393,14 @@ app.get('/api/admin/links', async (req, res) => {
 // ═══════ ADMIN: Удалить ссылку ═══════
 app.delete('/api/admin/link/:code', async (req, res) => {
   await GameLink.deleteOne({ code: req.params.code });
+  res.json({ ok: true });
+});
+
+// ═══════ ADMIN: Скрыть оверлей респина ═══════
+app.post('/api/admin/dismiss-respin-overlay', async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.json({ ok: false, error: 'Code required' });
+  await GameLink.updateOne({ code }, { $set: { respinOverlayDismissed: true } });
   res.json({ ok: true });
 });
 
@@ -749,6 +767,7 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
     if (boostLink && !boostLink.boostPaid) {
       boostLink.boostPaid = true;
       boostLink.boosted = true;
+      boostLink.boostAmount = TIER_PRICES[boostLink.tier]?.boost || 0;
       boostLink.boostPaymentUrl = null;
       boostLink.boostPreparedAt = null;
       await boostLink.save();
@@ -761,6 +780,12 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
       respinLink.respinPaid = true;
       respinLink.respinRequested = true;
       respinLink.respinCount += 1;
+      const paidType = order_id === respinLink.respinPremiumOrderId ? 'premium' : 'normal';
+      const paidAmount = TIER_PRICES[respinLink.tier]?.[paidType === 'premium' ? 'premium' : 'respin'] || 0;
+      respinLink.respinHistory.push({ type: paidType, amount: paidAmount, paidAt: new Date() });
+      respinLink.respinOverlayDismissed = false;
+      respinLink.oldGameKey = respinLink.gameKey || null;
+      respinLink.oldKeyWarningShown = !!respinLink.gameKey;
       respinLink.oldKeyNeedsPickup = !!(respinLink.gameKey || respinLink.gameName || respinLink.steamAppId);
       respinLink.previousGameName = respinLink.gameName || null;
       respinLink.previousGameKey = respinLink.gameKey || null;

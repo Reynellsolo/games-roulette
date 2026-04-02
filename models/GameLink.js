@@ -19,6 +19,7 @@ const gameLinkSchema = new mongoose.Schema({
   // Доплата ДО рулетки (повышенный шанс)
   boosted: { type: Boolean, default: false },
   boostPaid: { type: Boolean, default: false },
+  boostAmount: { type: Number, default: 0 },
   boostOrderId: { type: String, default: null },
   boostTransactionId: { type: String, default: null },
   boostPaymentUrl: { type: String, default: null },
@@ -31,6 +32,14 @@ const gameLinkSchema = new mongoose.Schema({
   respinOrderId: { type: String, default: null },
   respinTransactionId: { type: String, default: null },
   respinCount: { type: Number, default: 0 },
+  respinHistory: [{
+    type: { type: String, enum: ['normal', 'premium'] },
+    amount: { type: Number, default: 0 },
+    paidAt: { type: Date, default: Date.now }
+  }],
+  respinOverlayDismissed: { type: Boolean, default: false },
+  oldGameKey: { type: String, default: null },
+  oldKeyWarningShown: { type: Boolean, default: false },
   respinNormalOrderId: { type: String, default: null },
   respinNormalTransactionId: { type: String, default: null },
   respinNormalPaymentUrl: { type: String, default: null },

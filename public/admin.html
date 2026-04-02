@@ -622,6 +622,13 @@ function normalizeStr(s){
   return (s||'').trim().replace(/\s+/g,' ').toLowerCase();
 }
 
+function paymentSummary(link){
+  const boost=Number(link.boostAmount||0);
+  const history=Array.isArray(link.respinHistory)?link.respinHistory:[];
+  const respinTotal=history.reduce((s,r)=>s+Number(r.amount||0),0);
+  return {boost,respinTotal,total:boost+respinTotal,history};
+}
+
 // ═══ SOUND — loud, long (2.5 sec) ═══
 function playAlert(){
   try{
@@ -729,16 +736,19 @@ function renderWaitingTable(){
     if(isRespin){
       const cls=rt==='premium'?'respin-banner-premium':'respin-banner-normal';
       const txt=rt==='premium'?'🔥 ПЕРЕКРУТКА С БУСТОМ':'🔄 ПЕРЕКРУТКА ОБЫЧНАЯ';
-      banner=`<div class="respin-banner ${cls}" onclick="this.classList.add('hidden')">${txt}<br><small style="font-size:11px;font-weight:400;text-transform:none;">Нажми чтобы открыть</small></div>`;
+      const hiddenClass=l.respinOverlayDismissed?' hidden':'';
+      banner=`<div class="respin-banner ${cls}${hiddenClass}" onclick="dismissRespinOverlay('${l.code}', this)">${txt}<br><small style="font-size:11px;font-weight:400;text-transform:none;">Нажми чтобы скрыть</small></div>`;
     }
 
     const av=l.steamAvatar?`<img class="avatar" src="${l.steamAvatar}" title="${l.steamName||''}">`:`<div class="avatar-placeholder">—</div>`;
 
     const extras=[];
+    const pay=paymentSummary(l);
     if(l.boosted)extras.push('<span class="badge badge-boost">🔥 Буст</span>');
     if(l.respinCount>0)extras.push(`<span class="badge badge-respin">🔄 ×${l.respinCount}</span>`);
     if(rt==='premium'&&isRespin)extras.push('<span class="badge badge-respin-premium">⭐ Буст</span>');
     if(l.oldKeyNeedsPickup)extras.push('<span class="badge badge-waiting">⚠ Забрать старый ключ</span>');
+    if(pay.total>0)extras.push(`<span class="badge badge-system">💳 +${pay.total}₽</span>`);
 
     return `<tr class="respin-row">
       ${banner}
@@ -765,6 +775,8 @@ function openAssignModal(code){
     :'Не указан';
 
   const av=l.steamAvatar?`<img class="avatar" src="${l.steamAvatar}" style="width:30px;height:30px;">`:'';
+  const pay=paymentSummary(l);
+  const respinDetails=pay.history.map(r=>`${r.type==='premium'?'premium':'normal'}: ${r.amount||0}₽`).join(', ')||'—';
 
   document.getElementById('modal-info').innerHTML=`
     <div class="modal-info-row"><span class="modal-info-label">Steam профиль</span><span class="modal-info-value">${steamLinkHtml}</span></div>
@@ -772,6 +784,7 @@ function openAssignModal(code){
     <div class="modal-info-row"><span class="modal-info-label">Регион</span><span class="modal-info-value">${regionHtml(l.country)}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Уровень</span><span class="modal-info-value">${tierBadge(l.tier)}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Допы</span><span class="modal-info-value">${l.boosted?'🔥 Буст ':''}${l.respinCount>0?'🔄 ×'+l.respinCount:''} ${!l.boosted&&!l.respinCount?'—':''}</span></div>
+    <div class="modal-info-row"><span class="modal-info-label">Оплаты</span><span class="modal-info-value">Boost: ${pay.boost}₽ · Respin: ${respinDetails} · Итого: ${pay.total}₽</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Старый ключ</span><span class="modal-info-value">${l.oldKeyNeedsPickup?'⚠ Забрать у клиента перед выдачей нового':'—'}</span></div>
   `;
 
@@ -936,6 +949,17 @@ function deleteLink(code){
     try{await apiFetch('/link/'+code,{method:'DELETE'});showToast('🗑 Удалено');loadData();}
     catch(e){showToast('Ошибка','error');}
   });
+}
+
+async function dismissRespinOverlay(code, el){
+  el?.classList.add('hidden');
+  try{
+    await apiFetch('/dismiss-respin-overlay',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code})
+    });
+  }catch(e){}
 }
 
 // ═══ HISTORY ═══
