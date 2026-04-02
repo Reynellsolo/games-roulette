@@ -502,7 +502,7 @@ async function loadLink({preserveStep=false}={}){
     updatePrices(data.tier);
 
     if(data.spinCompleted){
-  // После успешного респина всегда запускаем новый цикл (анализ -> рулетка)
+  // Если вернулись с оплаты респина, но webhook ещё не применился — не показываем старый ключ
   const params = new URLSearchParams(window.location.search);
   if(params.get('respin_success')==='1'){
     const respinReady = data.respinRequested || !data.keyAssigned || !data.spinCompleted;
@@ -512,8 +512,8 @@ async function loadLink({preserveStep=false}={}){
       return;
     }
     updateUrlParam('respin_success', null);
-    restoreSavedChoices(data);
-    if(data.excludeDuplicates || data.steamId) runAnalysisExclude(); else runAnalysisSimple();
+    showStep('step-roulette');
+    initRouletteStrip();
     return;
   }
   
@@ -532,7 +532,11 @@ async function loadLink({preserveStep=false}={}){
       if(params.get('respin_success')==='1'){
         updateUrlParam('respin_success', null);
         restoreSavedChoices(data);
-        if(data.excludeDuplicates || data.steamId) runAnalysisExclude(); else runAnalysisSimple();
+        if(selectedRegion){
+          showStep('step-boost');
+        }else{
+          showStep('step-region');
+        }
         return;
       }
       if(data.respinRequested){
