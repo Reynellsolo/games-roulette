@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
 <title>🎰 Mystery Game Drop</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -343,6 +345,21 @@ let linkCode='',linkData=null,selectedMode=null,selectedRegion=null,steamData=nu
 let userOwnedAppIds=[];
 let userOwnedGameNames=[];
 let uiState={step:'step-mode',spinAnimating:false};
+const PATH_PREFIX=window.location.pathname.startsWith('/games/')?'/games':'';
+const API_CANDIDATES=[PATH_PREFIX, PATH_PREFIX==='/games'?'':'/games', '']
+  .map(p=>p.trim())
+  .filter((p,i,a)=>a.indexOf(p)===i)
+  .map(p=>`${p}/api`);
+
+async function apiFetch(path, options){
+  let last404=null;
+  for(const base of API_CANDIDATES){
+    const resp=await fetch(base+path, options);
+    if(resp.status!==404) return resp;
+    last404=resp;
+  }
+  return last404;
+}
 
 const TIER_PRICES={starter:{boost:45,respin:45,premium:90},bronze:{boost:135,respin:135,premium:270},silver:{boost:210,respin:210,premium:420},gold:{boost:300,respin:300,premium:600},diamond:{boost:450,respin:450,premium:900}};
 const TIER_NAMES={starter:'1 — Standard',bronze:'2 — Premium',silver:'3 — Elite',gold:'4 — Gold',diamond:'5 — Deluxe'};
@@ -457,7 +474,7 @@ function updatePrices(tier){
 
 async function loadLink({preserveStep=false}={}){
   try{
-    const r=await fetch(`/games/api/link/${linkCode}`,{cache:'no-store'});
+    const r=await apiFetch(`/link/${linkCode}`,{cache:'no-store'});
     const data=await r.json();
     if(!data.valid){showStep('step-error');document.getElementById('error-text').textContent=data.error||'Ссылка недействительна';return;}
     linkData=data;
@@ -466,9 +483,15 @@ async function loadLink({preserveStep=false}={}){
     updatePrices(data.tier);
 
     if(data.spinCompleted){
-  // Проверяем, был ли оплачен респин (нужно заново крутить)
+  // Если вернулись с оплаты респина, но webhook ещё не применился — не показываем старый ключ
   const params = new URLSearchParams(window.location.search);
   if(params.get('respin_success')==='1'){
+    const respinReady = data.respinRequested || !data.keyAssigned || !data.spinCompleted;
+    if(!respinReady){
+      showStep('step-waiting');
+      setAutoRefresh(true);
+      return;
+    }
     updateUrlParam('respin_success', null);
     showStep('step-roulette');
     initRouletteStrip();
@@ -730,7 +753,7 @@ function showResult(data){
   document.getElementById('result-cover').src=gameImage(data.steamAppId,data.gameName||'Game');
   document.getElementById('result-game-name').textContent=data.gameName||'Игра';
   document.getElementById('key-value').textContent=data.gameKey||'XXXXX-XXXXX-XXXXX';
-  document.getElementById('result-game-price').textContent=data.region ? `Регион: ${data.region}` : '';
+  document.getElementById('result-game-price').textContent=data.country ? `Регион: ${data.country}` : '';
   const keyBox=document.getElementById('key-box'),revealBtn=document.getElementById('btn-reveal'),activateBtn=document.getElementById('btn-activate'),respinOpts=document.getElementById('respin-options');
   if(data.keyRevealed){
     keyBox.classList.add('visible');
@@ -761,7 +784,7 @@ async function doRespin(type){
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span>';
   try{
-    const resp=await fetch('/games/api/create-respin-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:linkCode,type})});
+    const resp=await apiFetch('/create-respin-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:linkCode,type})});
     const data=await resp.json();
     if(data.ok&&data.payment_url){
       history.replaceState({...(history.state||{}),pendingPayment:type},'',window.location.href);
@@ -816,7 +839,7 @@ btnSteamCheck.addEventListener('click',async()=>{
   const url=steamUrlInput.value.trim(); if(!url) return;
   btnSteamCheck.disabled=true; btnSteamCheck.innerHTML='<span class="spinner"></span> Проверяем...';
   try{
-    const resp=await fetch('/games/api/check-steam',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({steamUrl:url})});
+    const resp=await apiFetch('/check-steam',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({steamUrl:url})});
     const data=await resp.json();
     if(data.ok){
       steamData=data; steamVerified=true;
@@ -867,7 +890,7 @@ document.getElementById('btn-boost-buy').addEventListener('click',async()=>{
   const btn=document.getElementById('btn-boost-buy');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Создаём платёж...';
   try{
-    const resp=await fetch('/games/api/create-boost-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:linkCode})});
+    const resp=await apiFetch('/create-boost-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:linkCode})});
     const data=await resp.json();
     if(data.ok&&data.payment_url){
       history.replaceState({...(history.state||{}),pendingPayment:'boost'},'',window.location.href);
@@ -885,7 +908,7 @@ document.getElementById('btn-spin').addEventListener('click',async()=>{
   const btn=document.getElementById('btn-spin');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Крутим...';
   try{
-    const resp=await fetch('/games/api/spin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    const resp=await apiFetch('/spin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       code:linkCode,
       steamProfileUrl:selectedMode==='exclude'?steamUrlInput.value:null,
       country:selectedRegion,
@@ -925,7 +948,7 @@ document.getElementById('btn-reveal').addEventListener('click',async()=>{
   const btn=document.getElementById('btn-reveal');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Открываем...';
   try{
-    const resp=await fetch('/games/api/reveal-key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:linkCode})});
+    const resp=await apiFetch('/reveal-key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:linkCode})});
     const data=await resp.json();
     if(!data.ok) throw new Error(data.error||'Ошибка');
     await loadLink({preserveStep:true});
