@@ -222,6 +222,7 @@ app.get('/api/link/:code', async (req, res) => {
           tier: link.tier,
           country: link.country,
           boosted: link.boosted,
+          boostPaid: link.boostPaid,
           excludeDuplicates: link.excludeDuplicates,
           steamProfileUrl: link.steamProfileUrl,
           steamId: link.steamId,
@@ -240,6 +241,7 @@ app.get('/api/link/:code', async (req, res) => {
           tier: link.tier,
           country: link.country,
           boosted: link.boosted,
+          boostPaid: link.boostPaid,
           excludeDuplicates: link.excludeDuplicates,
           steamProfileUrl: link.steamProfileUrl,
           steamId: link.steamId,
@@ -259,6 +261,7 @@ app.get('/api/link/:code', async (req, res) => {
       tier: link.tier,
       country: link.country,
       boosted: link.boosted || false,
+      boostPaid: link.boostPaid || false,
       excludeDuplicates: link.excludeDuplicates || false,
       respinRequested: link.respinRequested,
       respinType: link.respinType,
@@ -276,7 +279,7 @@ app.get('/api/link/:code', async (req, res) => {
 // ═══════ API: Прокрутка рулетки ═══════
 app.post('/api/spin', async (req, res) => {
   try {
-    const { code, steamProfileUrl, steamId, steamName, steamAvatar, country, excludeDuplicates } = req.body;
+    const { code, steamProfileUrl, steamId, steamName, steamAvatar, country, excludeDuplicates, boosted } = req.body;
 
     const link = await GameLink.findOne({ code });
     if (!link || !link.active) return res.json({ ok: false, error: 'Недействительная ссылка' });
@@ -295,6 +298,11 @@ app.post('/api/spin', async (req, res) => {
 
     link.spinCompleted = true;
     link.excludeDuplicates = excludeDuplicates || false;
+    if (boosted === true && !link.boosted) {
+      link.boosted = true;
+      link.boostPaid = true;
+      if (!link.boostAmount) link.boostAmount = TIER_PRICES[link.tier]?.boost || 0;
+    }
     link.steamProfileUrl = steamProfileUrl || null;
     link.steamId = steamId || null;
     link.steamName = steamName || null;
@@ -311,29 +319,40 @@ app.post('/api/spin', async (req, res) => {
 
 // ═══════ ADMIN: Генерация ссылок ═══════
 app.post('/api/admin/generate-links', async (req, res) => {
-  const { count, tier, note } = req.body;
-
-  if (!tier || !['starter', 'bronze', 'silver', 'gold', 'diamond'].includes(tier)) {
-    return res.json({ ok: false, error: 'Укажите корректный tier' });
-  }
-
-  const links = [];
-for (let i = 0; i < (count || 1); i++) {
-  const code = crypto.randomBytes(18).toString('base64url');
   try {
-    const link = new GameLink({ code, tier, note: note || '' });
-    await link.save();
-    links.push({ code, tier, url: `${getPublicBaseUrl(req)}/g/${code}` });
-  } catch (e) {
-    if (e.code === 11000) { // Duplicate key (коллизия, 1 на миллиард)
-      i--; // Повторить итерацию
-      continue;
-    }
-    throw e;
-  }
-}
+    const { count, tier, note } = req.body;
+    const hasCount = count !== undefined && count !== null && String(count).trim() !== '';
+    const parsedCount = Number.isInteger(count) ? count : Number.parseInt(count, 10);
+    const normalizedCount = hasCount ? parsedCount : 1;
 
-  res.json({ ok: true, links });
+    if (!tier || !['starter', 'bronze', 'silver', 'gold', 'diamond'].includes(tier)) {
+      return res.json({ ok: false, error: 'Укажите корректный tier' });
+    }
+    if (!Number.isFinite(normalizedCount) || normalizedCount < 1 || normalizedCount > 500) {
+      return res.json({ ok: false, error: 'count должен быть числом от 1 до 500' });
+    }
+
+    const links = [];
+    for (let i = 0; i < normalizedCount; i++) {
+      const code = crypto.randomBytes(18).toString('base64url');
+      try {
+        const link = new GameLink({ code, tier, note: note || '' });
+        await link.save();
+        links.push({ code, tier, url: `${getPublicBaseUrl(req)}/g/${code}` });
+      } catch (e) {
+        if (e.code === 11000) { // Duplicate key (коллизия, 1 на миллиард)
+          i--; // Повторить итерацию
+          continue;
+        }
+        throw e;
+      }
+    }
+
+    res.json({ ok: true, links });
+  } catch (e) {
+    console.error('Generate links error:', e);
+    res.status(500).json({ ok: false, error: 'Ошибка генерации ссылок' });
+  }
 });
 
 // ═══════ ADMIN: Назначить ключ ═══════
@@ -561,9 +580,13 @@ app.post('/api/reveal-key', async (req, res) => {
 });
 
 // ═══════ Секретная админка ═══════
-app.get(`/${process.env.ADMIN_URL}`, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
+if (process.env.ADMIN_URL) {
+  app.get(`/${process.env.ADMIN_URL}`, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  });
+} else {
+  console.warn('ADMIN_URL is not set: secret admin route disabled');
+}
 
 // ═══════ ANTILOPAY CONFIG ═══════
 const ANTILOPAY_SECRET_ID = process.env.ANTILOPAY_SECRET_ID || '';
@@ -605,6 +628,34 @@ function signAntilopayRequest(body) {
 function generatePaymentOrderId(code) {
   const suffix = Math.random().toString(36).slice(2, 8);
   return `${code}_${Date.now()}_${suffix}`;
+}
+
+function applyRespinResetState(link, paidType = 'normal') {
+  const amountKey = paidType === 'premium' ? 'premium' : 'respin';
+  const paidAmount = TIER_PRICES[link.tier]?.[amountKey] || 0;
+
+  link.respinPaid = true;
+  link.respinRequested = true;
+  link.respinCount += 1;
+  link.respinType = paidType;
+  link.respinHistory.push({ type: paidType, amount: paidAmount, paidAt: new Date() });
+  link.respinOverlayDismissed = false;
+  link.oldGameKey = link.gameKey || null;
+  link.oldKeyWarningShown = !!link.gameKey;
+  link.oldKeyNeedsPickup = !!(link.gameKey || link.gameName || link.steamAppId);
+  link.previousGameName = link.gameName || null;
+  link.previousGameKey = link.gameKey || null;
+  link.previousSteamAppId = link.steamAppId || null;
+  link.keyRevealed = false;
+  link.keyAssigned = false;
+  link.gameName = null;
+  link.gameKey = null;
+  link.steamAppId = null;
+  link.spinCompleted = false;
+  link.respinNormalPaymentUrl = null;
+  link.respinNormalPreparedAt = null;
+  link.respinPremiumPaymentUrl = null;
+  link.respinPremiumPreparedAt = null;
 }
 
 // ═══════ СОЗДАНИЕ ПЛАТЕЖА (BOOST) ═══════
@@ -736,6 +787,31 @@ app.post('/api/create-respin-payment', paymentLimiter, async (req, res) => {
   }
 });
 
+// ═══════ FALLBACK: пометить успешную перекрутку после возврата со страницы оплаты ═══════
+app.post('/api/respin-success-fallback', async (req, res) => {
+  try {
+    const { code, type } = req.body;
+    const link = await GameLink.findOne({ code });
+    if (!link || !link.active || !link.keyAssigned || link.keyRevealed) {
+      return res.json({ ok: false, error: 'Недоступно' });
+    }
+    if (link.respinRequested || !link.respinType) return res.json({ ok: true, already: true });
+
+    const paidType = type === 'premium' ? 'premium' : 'normal';
+    const hasPreparedOrder = paidType === 'premium'
+      ? !!link.respinPremiumOrderId
+      : !!link.respinNormalOrderId;
+    if (!hasPreparedOrder) return res.json({ ok: false, error: 'Платёж не найден' });
+
+    applyRespinResetState(link, paidType);
+    await link.save();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Respin fallback error:', e);
+    res.status(500).json({ ok: false, error: 'Ошибка сервера' });
+  }
+});
+
 // ═══════ WEBHOOK ANTILOPAY ═══════
 app.post('/api/webhook/antilopay-games', async (req, res) => {
   try {
@@ -780,29 +856,8 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
     });
     if (respinLink && !respinLink.respinPaid) {
       console.log('[WEBHOOK RESPIN] Matched link:', respinLink.code);
-      respinLink.respinPaid = true;
-      respinLink.respinRequested = true;
-      respinLink.respinCount += 1;
       const paidType = order_id === respinLink.respinPremiumOrderId ? 'premium' : 'normal';
-      const paidAmount = TIER_PRICES[respinLink.tier]?.[paidType === 'premium' ? 'premium' : 'respin'] || 0;
-      respinLink.respinHistory.push({ type: paidType, amount: paidAmount, paidAt: new Date() });
-      respinLink.respinOverlayDismissed = false;
-      respinLink.oldGameKey = respinLink.gameKey || null;
-      respinLink.oldKeyWarningShown = !!respinLink.gameKey;
-      respinLink.oldKeyNeedsPickup = !!(respinLink.gameKey || respinLink.gameName || respinLink.steamAppId);
-      respinLink.previousGameName = respinLink.gameName || null;
-      respinLink.previousGameKey = respinLink.gameKey || null;
-      respinLink.previousSteamAppId = respinLink.steamAppId || null;
-      respinLink.keyRevealed = false;
-      respinLink.keyAssigned = false;
-      respinLink.gameName = null;
-      respinLink.gameKey = null;
-      respinLink.steamAppId = null;
-      respinLink.spinCompleted = false;
-      respinLink.respinNormalPaymentUrl = null;
-      respinLink.respinNormalPreparedAt = null;
-      respinLink.respinPremiumPaymentUrl = null;
-      respinLink.respinPremiumPreparedAt = null;
+      applyRespinResetState(respinLink, paidType);
       console.log('[WEBHOOK RESPIN] Before save:', {
         code: respinLink.code,
         spinCompleted: respinLink.spinCompleted,

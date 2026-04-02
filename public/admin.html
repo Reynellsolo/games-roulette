@@ -744,7 +744,8 @@ function renderWaitingTable(){
 
     const extras=[];
     const pay=paymentSummary(l);
-    if(l.boosted)extras.push('<span class="badge badge-boost">🔥 Буст</span>');
+    if(l.boosted||l.boostPaid)extras.push('<span class="badge badge-boost">🔥 Буст</span>');
+    if(l.spinCompleted && !l.excludeDuplicates)extras.push('<span class="badge badge-no">♻️ Без исключения повторов</span>');
     if(l.respinCount>0)extras.push(`<span class="badge badge-respin">🔄 ×${l.respinCount}</span>`);
     if(rt==='premium'&&isRespin)extras.push('<span class="badge badge-respin-premium">⭐ Буст</span>');
     if(l.oldKeyNeedsPickup)extras.push('<span class="badge badge-waiting">⚠ Забрать старый ключ</span>');
@@ -777,13 +778,20 @@ function openAssignModal(code){
   const av=l.steamAvatar?`<img class="avatar" src="${l.steamAvatar}" style="width:30px;height:30px;">`:'';
   const pay=paymentSummary(l);
   const respinDetails=pay.history.map(r=>`${r.type==='premium'?'premium':'normal'}: ${r.amount||0}₽`).join(', ')||'—';
+  const modalExtras=[];
+  if(l.boosted||l.boostPaid) modalExtras.push('<span class="badge badge-boost">🔥 Буст</span>');
+  modalExtras.push(l.excludeDuplicates
+    ?'<span class="badge badge-exclude">✓ С исключением повторов</span>'
+    :'<span class="badge badge-no">♻️ Без исключения повторов</span>');
+  if(l.respinCount>0) modalExtras.push(`<span class="badge badge-respin">🔄 ×${l.respinCount}</span>`);
+  if(l.respinType==='premium'&&l.respinRequested) modalExtras.push('<span class="badge badge-respin-premium">⭐ Респин с бустом</span>');
 
   document.getElementById('modal-info').innerHTML=`
     <div class="modal-info-row"><span class="modal-info-label">Steam профиль</span><span class="modal-info-value">${steamLinkHtml}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Никнейм</span><span class="modal-info-value">${av} ${l.steamName||'—'}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Регион</span><span class="modal-info-value">${regionHtml(l.country)}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Уровень</span><span class="modal-info-value">${tierBadge(l.tier)}</span></div>
-    <div class="modal-info-row"><span class="modal-info-label">Допы</span><span class="modal-info-value">${l.boosted?'🔥 Буст ':''}${l.respinCount>0?'🔄 ×'+l.respinCount:''} ${!l.boosted&&!l.respinCount?'—':''}</span></div>
+    <div class="modal-info-row"><span class="modal-info-label">Допы</span><span class="modal-info-value">${modalExtras.join(' ')}</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Оплаты</span><span class="modal-info-value">Boost: ${pay.boost}₽ · Respin: ${respinDetails} · Итого: ${pay.total}₽</span></div>
     <div class="modal-info-row"><span class="modal-info-label">Старый ключ</span><span class="modal-info-value">${l.oldKeyNeedsPickup?'⚠ Забрать у клиента перед выдачей нового':'—'}</span></div>
   `;
@@ -895,20 +903,26 @@ document.getElementById('btn-generate').addEventListener('click',async()=>{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({count,tier})
     });
-    const data=await r.json();
-    if(data.ok){
-      const list=document.getElementById('gen-links-list');
-      list.innerHTML=data.links.map(l=>`<div class="gen-link-item" onclick="copyText('${l.url}')" title="Нажмите чтобы скопировать"><span style="flex:1">${l.url}</span><button class="copy-btn" onclick="event.stopPropagation();copyText('${l.url}')">📋</button></div>`).join('');
-      document.getElementById('gen-result').style.display='block';
-      document.getElementById('btn-copy-all').onclick=()=>copyText(data.links.map(l=>l.url).join('\n'));
-      document.getElementById('btn-export-txt').onclick=()=>{
-        const b=new Blob([data.links.map(l=>l.url).join('\n')],{type:'text/plain'});
-        const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`links_${tier}_${count}.txt`;a.click();
-      };
-      showToast(`✅ ${data.links.length} ссылок создано`);loadData();
+    const data=await r.json().catch(()=>({ok:false,error:`HTTP ${r.status}`}));
+    if(!r.ok || !data.ok){
+      showToast(data.error||`Ошибка генерации (${r.status})`,'error');
+      return;
     }
-  }catch(e){showToast('Ошибка','error');}
-  btn.disabled=false;btn.textContent='Сгенерировать';
+
+    const list=document.getElementById('gen-links-list');
+    list.innerHTML=data.links.map(l=>`<div class="gen-link-item" onclick="copyText('${l.url}')" title="Нажмите чтобы скопировать"><span style="flex:1">${l.url}</span><button class="copy-btn" onclick="event.stopPropagation();copyText('${l.url}')">📋</button></div>`).join('');
+    document.getElementById('gen-result').style.display='block';
+    document.getElementById('btn-copy-all').onclick=()=>copyText(data.links.map(l=>l.url).join('\n'));
+    document.getElementById('btn-export-txt').onclick=()=>{
+      const b=new Blob([data.links.map(l=>l.url).join('\n')],{type:'text/plain'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`links_${tier}_${count}.txt`;a.click();
+    };
+    showToast(`✅ ${data.links.length} ссылок создано`);loadData();
+  }catch(e){
+    showToast('Ошибка соединения при генерации','error');
+  }finally{
+    btn.disabled=false;btn.textContent='Сгенерировать';
+  }
 });
 
 // ═══ ALL LINKS ═══
