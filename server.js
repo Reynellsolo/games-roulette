@@ -13,11 +13,11 @@ const GameLink = require('./models/GameLink');
 const ImportedOrder = require('./models/ImportedOrder');
 
 const app = express();
-const trustProxyRaw = String(process.env.TRUST_PROXY || '').toLowerCase().trim();
-const trustProxyEnabled = trustProxyRaw
-  ? ['1', 'true', 'yes', 'on'].includes(trustProxyRaw)
-  : true; // production-friendly default for nginx/reverse-proxy setups
-app.set('trust proxy', trustProxyEnabled);
+const trustProxyRaw = String(process.env.TRUST_PROXY || '1').toLowerCase().trim();
+const trustProxySetting = /^\d+$/.test(trustProxyRaw)
+  ? Number(trustProxyRaw) // recommended for express-rate-limit (e.g. 1 hop nginx)
+  : (['true', 'yes', 'on'].includes(trustProxyRaw) ? true : false);
+app.set('trust proxy', trustProxySetting);
 const helmet = require('helmet');
 app.use(helmet({
   contentSecurityPolicy: false  // Отключаем CSP (разрешаем inline-скрипты)
@@ -739,6 +739,7 @@ app.post('/api/create-respin-payment', paymentLimiter, async (req, res) => {
 // ═══════ WEBHOOK ANTILOPAY ═══════
 app.post('/api/webhook/antilopay-games', async (req, res) => {
   try {
+    console.log('[WEBHOOK] Received:', JSON.stringify(req.body));
     // ═══════ Проверка подписи ═══════
     const receivedSign = req.headers['x-apay-sign'];
     if (!receivedSign) {
@@ -765,6 +766,7 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
 
     const boostLink = await GameLink.findOne({ boostOrderId: order_id });
     if (boostLink && !boostLink.boostPaid) {
+      console.log('[WEBHOOK BOOST] Matched link:', boostLink.code);
       boostLink.boostPaid = true;
       boostLink.boosted = true;
       boostLink.boostAmount = TIER_PRICES[boostLink.tier]?.boost || 0;
@@ -777,6 +779,7 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
       $or: [{ respinOrderId: order_id }, { respinNormalOrderId: order_id }, { respinPremiumOrderId: order_id }]
     });
     if (respinLink && !respinLink.respinPaid) {
+      console.log('[WEBHOOK RESPIN] Matched link:', respinLink.code);
       respinLink.respinPaid = true;
       respinLink.respinRequested = true;
       respinLink.respinCount += 1;
@@ -800,6 +803,12 @@ app.post('/api/webhook/antilopay-games', async (req, res) => {
       respinLink.respinNormalPreparedAt = null;
       respinLink.respinPremiumPaymentUrl = null;
       respinLink.respinPremiumPreparedAt = null;
+      console.log('[WEBHOOK RESPIN] Before save:', {
+        code: respinLink.code,
+        spinCompleted: respinLink.spinCompleted,
+        keyAssigned: respinLink.keyAssigned,
+        respinRequested: respinLink.respinRequested
+      });
       await respinLink.save();
     }
 
