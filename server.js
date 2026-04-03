@@ -183,14 +183,6 @@ function getPublicBaseUrl(req) {
   return `${hostBase}${getPublicPathPrefix(req)}`;
 }
 
-function adminAuth(req, res, next) {
-  const token = process.env.ADMIN_API_TOKEN;
-  if (!token) return next();
-  const provided = req.headers['x-admin-token'];
-  if (provided !== token) return res.status(401).json({ ok: false, error: 'Unauthorized' });
-  next();
-}
-app.use('/api/admin', adminAuth);
 
 // ═══════ API: Проверка ссылки ═══════
 app.get('/api/link/:code', async (req, res) => {
