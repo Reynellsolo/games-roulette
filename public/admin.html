@@ -92,6 +92,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 
 /* ═══ FORM ═══ */
 .form-row{display:flex;gap:14px;margin-bottom:18px;align-items:flex-end;flex-wrap:wrap;}
+.toolbar-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;}
 .form-group{display:flex;flex-direction:column;gap:6px;}
 .form-group label{font-size:12px;font-weight:600;color:var(--text-dim);}
 @media(min-width:1600px){.form-group label{font-size:13px;}}
@@ -404,6 +405,20 @@ tr:hover td{background:var(--bg-hover);}
     <!-- ═══ ОЖИДАЮТ КЛЮЧ ═══ -->
     <div class="section active" id="sec-waiting">
       <div class="section-title">🔑 Ожидают ключ <span class="badge badge-waiting" id="waiting-badge" style="font-size:14px;">0</span></div>
+      <div class="toolbar-row">
+        <div class="form-group">
+          <label>Поиск</label>
+          <input type="text" id="waiting-search" placeholder="Ник, SteamID, регион, код..." style="min-width:280px;">
+        </div>
+        <div class="form-group">
+          <label>Сортировка</label>
+          <select id="waiting-sort">
+            <option value="respin_first">Сначала перекрутки</option>
+            <option value="newest">Сначала новые</option>
+            <option value="oldest">Сначала старые</option>
+          </select>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr>
@@ -591,6 +606,8 @@ let allLinks=[];
 let lastWaitingCount=-1;
 let currentLinksFilter='all';
 let currentHistoryFilter='all';
+let waitingSearchQuery='';
+let waitingSort='respin_first';
 let importFileData=null;
 let currentAssignCode=null;
 let confirmCallback=null;
@@ -722,9 +739,32 @@ async function loadData(){
 
 // ═══ WAITING TABLE ═══
 function renderWaitingTable(){
-  const waiting=allLinks.filter(l=>l.respinRequested||(l.spinCompleted&&!l.keyAssigned));
+  let waiting=allLinks.filter(l=>l.respinRequested||(l.spinCompleted&&!l.keyAssigned));
   const tbody=document.getElementById('waiting-tbody');
   const empty=document.getElementById('waiting-empty');
+
+  if(waitingSearchQuery.length>=2){
+    waiting=waiting.filter(l=>{
+      const haystack=[
+        l.code,
+        l.steamName,
+        l.steamId,
+        l.country,
+        l.customerName,
+        l.orderNumber
+      ].map(normalizeStr).join(' ');
+      return haystack.includes(waitingSearchQuery);
+    });
+  }
+
+  waiting.sort((a,b)=>{
+    if(waitingSort==='respin_first'){
+      if(!!a.respinRequested!==!!b.respinRequested) return a.respinRequested?-1:1;
+      return new Date(b.createdAt)-new Date(a.createdAt);
+    }
+    if(waitingSort==='oldest') return new Date(a.createdAt)-new Date(b.createdAt);
+    return new Date(b.createdAt)-new Date(a.createdAt);
+  });
 
   if(!waiting.length){tbody.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
@@ -1097,6 +1137,15 @@ document.getElementById('btn-import-confirm').addEventListener('click',async()=>
 // ═══ POLLING ═══
 loadData();
 setInterval(loadData,8000);
+
+document.getElementById('waiting-search').addEventListener('input',e=>{
+  waitingSearchQuery=normalizeStr(e.target.value);
+  renderWaitingTable();
+});
+document.getElementById('waiting-sort').addEventListener('change',e=>{
+  waitingSort=e.target.value;
+  renderWaitingTable();
+});
 </script>
 </body>
 </html>

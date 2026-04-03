@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
 <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
+<link rel="preconnect" href="https://lk.antilopay.com" crossorigin>
+<link rel="dns-prefetch" href="//lk.antilopay.com">
 <title>🎰 Mystery Game Drop</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -80,8 +82,8 @@ body.state-transition{opacity:.97;transform:translateY(2px);}
 .mode-card.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 35px var(--accent-glow);}
 .mode-icon{font-size:42px;flex-shrink:0;}@media(min-width:768px){.mode-icon{font-size:52px;}}
 .mode-info{flex:1;position:relative;z-index:1;padding-right:10px;}
-.mode-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;}@media(min-width:768px){.mode-title{font-size:20px;}}
-.mode-desc{font-size:13px;color:var(--text-dim);line-height:1.5;}@media(min-width:768px){.mode-desc{font-size:15px;}}
+.mode-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;text-align:center;}@media(min-width:768px){.mode-title{font-size:20px;}}
+.mode-desc{font-size:13px;color:var(--text-dim);line-height:1.5;text-align:center;}@media(min-width:768px){.mode-desc{font-size:15px;}}
 .mode-tag{position:absolute;top:-1px;right:-1px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:5px 12px;border-radius:0 18px 0 14px;background:linear-gradient(135deg,rgba(0,255,136,0.2),rgba(0,255,136,0.1));color:var(--neon-green);border-bottom:1px solid rgba(0,255,136,0.3);border-left:1px solid rgba(0,255,136,0.3);z-index:2;}
 
 .input-group{margin-bottom:22px;}.input-label{display:block;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
@@ -99,12 +101,18 @@ body.state-transition{opacity:.97;transform:translateY(2px);}
 .warning-box{display:none;background:rgba(255,59,59,0.06);border:1px solid rgba(255,59,59,0.25);border-radius:14px;padding:16px;margin-bottom:22px;text-align:center;animation:shake .4s ease;}
 .warning-box.visible{display:block;} @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
 .warning-box .w-title{color:var(--red);font-weight:700;font-size:14px;margin-bottom:6px;} .warning-box .w-text{color:#ff7b7b;font-size:13px;line-height:1.5;}
+.warning-box.profile-closed{background:linear-gradient(145deg,rgba(255,59,59,0.12),rgba(255,59,59,0.03));border-color:rgba(255,59,59,0.45);}
+.warning-box.games-closed{background:linear-gradient(145deg,rgba(255,140,0,0.12),rgba(255,140,0,0.03));border-color:rgba(255,140,0,0.5);}
+.warning-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;border:1px solid currentColor;}
+.warning-box.profile-closed .warning-badge{color:#ff9c9c;}
+.warning-box.games-closed .warning-badge{color:#ffcb8b;}
+.help-btn-inline{margin-top:-4px;margin-bottom:16px;}
 
 .region-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;}
 @media(min-width:768px){.region-grid{grid-template-columns:repeat(3,1fr);gap:14px;}}
 .region-card{background:var(--bg-input);border:2px solid var(--border);border-radius:14px;padding:16px 12px;cursor:pointer;text-align:center;transition:all .3s ease;display:flex;flex-direction:column;align-items:center;gap:8px;}
 .region-card:hover{border-color:var(--border-hover);transform:translateY(-3px);} .region-card.selected{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 25px var(--accent-glow);}
-.region-flag{width:36px;height:27px;border-radius:4px;object-fit:cover;} .region-name{font-size:13px;font-weight:600;color:var(--text);} .region-card-wide{grid-column:1/-1;}
+.region-flag{font-size:30px;line-height:1;} .region-name{font-size:13px;font-weight:600;color:var(--text);} .region-card-wide{grid-column:1/-1;}
 .region-help-btn{display:inline-flex;align-items:center;gap:5px;background:none;border:1px solid var(--border);border-radius:10px;color:var(--text-dim);font-size:12px;padding:6px 14px;cursor:pointer;transition:all .3s;margin-bottom:18px;}
 .region-help-btn:hover{border-color:var(--accent);color:var(--accent);}
 
@@ -185,10 +193,16 @@ body.state-transition{opacity:.97;transform:translateY(2px);}
 
 .confetti-container{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;} .confetti-piece{position:absolute;animation:confetti-drop linear forwards;} @keyframes confetti-drop{0%{transform:translateY(-20px) rotate(0deg) scale(1);opacity:1;}100%{transform:translateY(105vh) rotate(720deg) scale(.4);opacity:0;}}
 .error-content{text-align:center;padding:40px 10px;} .error-icon{font-size:56px;margin-bottom:18px;}
+.toast-stack{position:fixed;right:16px;bottom:16px;z-index:10020;display:flex;flex-direction:column;gap:8px;max-width:360px;}
+.toast-item{background:#101024;border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:10px;font-size:13px;box-shadow:0 12px 28px rgba(0,0,0,0.45);opacity:0;transform:translateY(8px);transition:opacity .22s ease,transform .22s ease;}
+.toast-item.visible{opacity:1;transform:translateY(0);}
+.toast-item.error{border-color:rgba(255,59,59,0.6);color:#ff9c9c;}
+.toast-item.success{border-color:rgba(0,255,136,0.4);}
 </style>
 </head>
 <body>
 <div class="particles" id="particles"></div>
+<div class="toast-stack" id="toast-stack"></div>
 <div class="container">
   <div class="card">
     <div class="step active" id="step-mode">
@@ -206,6 +220,7 @@ body.state-transition{opacity:.97;transform:translateY(2px);}
 
     <div class="step" id="step-steam">
       <div class="header"><span class="header-icon">🔍</span><h1 class="header-title"><span class="gradient-text">Проверка библиотеки</span></h1><p class="header-sub">Вставь ссылку на профиль Steam — бот проверит библиотеку и исключит повторы</p></div>
+      <div style="text-align:center;"><button class="region-help-btn help-btn-inline" id="btn-steam-help">ℹ️ Как найти ссылку на профиль?</button></div>
       <div class="input-group"><label class="input-label">Ссылка на профиль Steam</label><input type="text" class="input-field" id="steam-url" placeholder="https://steamcommunity.com/id/nickname"></div>
       <div class="steam-card" id="steam-card"><div class="steam-card-inner"><img src="" alt="" id="s-avatar"><div class="steam-card-info"><div class="steam-card-name" id="s-name">—</div><div class="steam-card-id" id="s-id">—</div></div><span class="steam-card-badge">✓ Проверен</span></div><div class="steam-checks"><span class="steam-check">🔓 Профиль открыт</span><span class="steam-check">🎮 Игры доступны</span></div></div>
       <div class="warning-box" id="steam-warning"><div class="w-title">⚠️ <span id="w-title"></span></div><p class="w-text" id="w-text"></p></div>
@@ -217,15 +232,15 @@ body.state-transition{opacity:.97;transform:translateY(2px);}
       <div class="header"><span class="header-icon">🌍</span><h1 class="header-title"><span class="gradient-text">Выбери регион</span></h1><p class="header-sub">Укажи регион своего магазина Steam</p></div>
       <div style="text-align:center;margin-bottom:6px;"><button class="region-help-btn" id="btn-region-help">ℹ️ Где посмотреть свой регион?</button></div>
       <div class="region-grid">
-        <div class="region-card" data-region="Россия"><img class="region-flag" src="https://flagcdn.com/w80/ru.png" alt="RU"><span class="region-name">Россия</span></div>
-        <div class="region-card" data-region="Казахстан"><img class="region-flag" src="https://flagcdn.com/w80/kz.png" alt="KZ"><span class="region-name">Казахстан</span></div>
-        <div class="region-card" data-region="Украина"><img class="region-flag" src="https://flagcdn.com/w80/ua.png" alt="UA"><span class="region-name">Украина</span></div>
-        <div class="region-card" data-region="Беларусь"><img class="region-flag" src="https://flagcdn.com/w80/by.png" alt="BY"><span class="region-name">Беларусь</span></div>
-        <div class="region-card" data-region="Турция"><img class="region-flag" src="https://flagcdn.com/w80/tr.png" alt="TR"><span class="region-name">Турция</span></div>
-        <div class="region-card" data-region="Аргентина"><img class="region-flag" src="https://flagcdn.com/w80/ar.png" alt="AR"><span class="region-name">Аргентина</span></div>
-        <div class="region-card" data-region="США"><img class="region-flag" src="https://flagcdn.com/w80/us.png" alt="US"><span class="region-name">США</span></div>
-        <div class="region-card" data-region="Европа"><img class="region-flag" src="https://flagcdn.com/w80/eu.png" alt="EU"><span class="region-name">Европа</span></div>
-        <div class="region-card region-card-wide" data-region="Другая"><img class="region-flag" src="https://flagcdn.com/w80/un.png" alt="UN"><span class="region-name">Другой регион</span></div>
+        <div class="region-card" data-region="Россия"><span class="region-flag">🇷🇺</span><span class="region-name">Россия</span></div>
+        <div class="region-card" data-region="Казахстан"><span class="region-flag">🇰🇿</span><span class="region-name">Казахстан</span></div>
+        <div class="region-card" data-region="Украина"><span class="region-flag">🇺🇦</span><span class="region-name">Украина</span></div>
+        <div class="region-card" data-region="Беларусь"><span class="region-flag">🇧🇾</span><span class="region-name">Беларусь</span></div>
+        <div class="region-card" data-region="Турция"><span class="region-flag">🇹🇷</span><span class="region-name">Турция</span></div>
+        <div class="region-card" data-region="Аргентина"><span class="region-flag">🇦🇷</span><span class="region-name">Аргентина</span></div>
+        <div class="region-card" data-region="США"><span class="region-flag">🇺🇸</span><span class="region-name">США</span></div>
+        <div class="region-card" data-region="Европа"><span class="region-flag">🇪🇺</span><span class="region-name">Европа</span></div>
+        <div class="region-card region-card-wide" data-region="Другая"><span class="region-flag">🌐</span><span class="region-name">Другой регион</span></div>
       </div>
       <button class="btn btn-glow" id="btn-region-next" disabled>Продолжить</button>
       <button class="btn btn-ghost" id="btn-region-back">Назад</button>
@@ -339,6 +354,14 @@ body.state-transition{opacity:.97;transform:translateY(2px);}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-steam-help">
+  <div class="modal-box">
+    <h3 class="modal-title">🔗 Как найти ссылку на профиль Steam</h3>
+    <div id="steam-help-content"></div>
+    <button class="btn btn-ghost" id="btn-steam-help-close">Закрыть</button>
+  </div>
+</div>
+
 <div class="confetti-container" id="confetti-container"></div>
 
 <script>
@@ -348,6 +371,7 @@ let userOwnedGameNames=[];
 let uiState={step:'step-mode',spinAnimating:false};
 let boostedSelected=false;
 let respinFallbackTried=false;
+let paymentReturnGuardTimer=null;
 const PATH_PREFIX=window.location.pathname.startsWith('/games/')?'/games':'';
 const API_CANDIDATES=[PATH_PREFIX, PATH_PREFIX==='/games'?'':'/games', '']
   .map(p=>p.trim())
@@ -436,6 +460,76 @@ function showStep(id){
   setTimeout(()=>document.body.classList.remove('state-transition'),220);
 }
 
+function showToast(text,type='success',dur=3000){
+  const stack=document.getElementById('toast-stack');
+  if(!stack) return;
+  const toast=document.createElement('div');
+  toast.className=`toast-item ${type}`;
+  toast.textContent=text;
+  stack.appendChild(toast);
+  requestAnimationFrame(()=>toast.classList.add('visible'));
+  setTimeout(()=>{
+    toast.classList.remove('visible');
+    setTimeout(()=>toast.remove(),220);
+  },dur);
+}
+
+function isMobileDevice(){
+  return window.matchMedia('(max-width: 768px)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'');
+}
+
+function renderSteamHelp(){
+  const container=document.getElementById('steam-help-content');
+  if(!container) return;
+  if(isMobileDevice()){
+    container.innerHTML=`
+      <div class="modal-step"><div class="modal-step-num">1</div><div class="modal-step-text">Откройте приложение Steam на вашем устройстве.</div></div>
+      <div class="modal-step"><div class="modal-step-num">2</div><div class="modal-step-text">Нажмите на свою аватарку в правом верхнем углу.</div></div>
+      <div class="modal-step"><div class="modal-step-num">3</div><div class="modal-step-text">Выберите «Открыть профиль».</div></div>
+      <div class="modal-step"><div class="modal-step-num">4</div><div class="modal-step-text">Нажмите ⋮ вверху экрана.</div></div>
+      <div class="modal-step"><div class="modal-step-num">5</div><div class="modal-step-text">Выберите «Поделиться» — ссылка скопируется автоматически.</div></div>
+    `;
+  }else{
+    container.innerHTML=`
+      <div class="modal-step"><div class="modal-step-num">1</div><div class="modal-step-text">Откройте Steam и войдите в аккаунт.</div></div>
+      <div class="modal-step"><div class="modal-step-num">2</div><div class="modal-step-text">В верхней панели нажмите на своё имя (рядом с «Сообщество»/«Библиотека»).</div></div>
+      <div class="modal-step"><div class="modal-step-num">3</div><div class="modal-step-text">Перейдите на страницу профиля.</div></div>
+      <div class="modal-step"><div class="modal-step-num">4</div><div class="modal-step-text">Скопируйте ссылку из адресной строки.</div></div>
+      <div class="modal-step"><div class="modal-step-num">5</div><div class="modal-step-text">Примеры: <br>— https://steamcommunity.com/id/ВАШ_NICKNAME <br>— https://steamcommunity.com/profiles/12345678901234567</div></div>
+    `;
+  }
+}
+
+function warmUpPaymentSystem(){
+  const iframe=document.createElement('iframe');
+  iframe.src='https://lk.antilopay.com/';
+  iframe.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;top:-9999px;';
+  iframe.setAttribute('aria-hidden','true');
+  iframe.setAttribute('tabindex','-1');
+  document.body.appendChild(iframe);
+  setTimeout(()=>iframe.remove(), 12000);
+}
+
+function resetPendingPaymentState(){
+  const state={...(history.state||{})};
+  if(state.pendingPayment){
+    delete state.pendingPayment;
+    history.replaceState(state,'',window.location.href);
+  }
+}
+
+function startPaymentReturnGuard(){
+  clearTimeout(paymentReturnGuardTimer);
+  paymentReturnGuardTimer=setTimeout(()=>{
+    resetPaymentButtons();
+    updateUrlParam('respin_success',null);
+    updateUrlParam('boost_success',null);
+    resetPendingPaymentState();
+    loadLinkDebounced({preserveStep:true});
+    showToast('Платёж не завершён. Можно выбрать действие заново.','error',4500);
+  },12000);
+}
+
 let autoRefreshCount = 0;
 function setAutoRefresh(on){
   if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
@@ -496,6 +590,17 @@ function restoreSavedChoices(data){
   }else{
     selectedMode='normal';
   }
+  syncSelectionsUI();
+}
+
+function syncSelectionsUI(){
+  document.querySelectorAll('.mode-card').forEach(card=>{
+    card.classList.toggle('selected', card.dataset.mode===selectedMode);
+  });
+  document.querySelectorAll('.region-card').forEach(card=>{
+    card.classList.toggle('selected', card.dataset.region===selectedRegion);
+  });
+  document.getElementById('btn-region-next').disabled=!selectedRegion;
 }
 
 async function loadLink({preserveStep=false}={}){
@@ -513,6 +618,7 @@ async function loadLink({preserveStep=false}={}){
   // После успешного респина всегда запускаем новый цикл (анализ -> рулетка)
   const params = new URLSearchParams(window.location.search);
   if(params.get('respin_success')==='1'){
+    startPaymentReturnGuard();
     const respinReady = data.respinRequested || !data.keyAssigned || !data.spinCompleted;
     if(!respinReady){
       if(!respinFallbackTried){
@@ -528,7 +634,9 @@ async function loadLink({preserveStep=false}={}){
       return;
     }
     respinFallbackTried=false;
+    clearTimeout(paymentReturnGuardTimer);
     updateUrlParam('respin_success', null);
+    resetPendingPaymentState();
     restoreSavedChoices(data);
     if(data.excludeDuplicates || data.steamId) runAnalysisExclude(); else runAnalysisSimple();
     return;
@@ -541,15 +649,21 @@ async function loadLink({preserveStep=false}={}){
       setAutoRefresh(false);
       const params=new URLSearchParams(window.location.search);
       if(params.get('boost_success')==='1'){
+        startPaymentReturnGuard();
         boostedSelected=true;
         document.body.classList.add('boosted-theme');
+        clearTimeout(paymentReturnGuardTimer);
         updateUrlParam('boost_success', null);
+        resetPendingPaymentState();
         restoreSavedChoices(data);
         if(data.excludeDuplicates || data.steamId) runAnalysisExclude(); else runAnalysisSimple();
         return;
       }
       if(params.get('respin_success')==='1'){
+        startPaymentReturnGuard();
+        clearTimeout(paymentReturnGuardTimer);
         updateUrlParam('respin_success', null);
+        resetPendingPaymentState();
         restoreSavedChoices(data);
         if(data.excludeDuplicates || data.steamId) runAnalysisExclude(); else runAnalysisSimple();
         return;
@@ -566,6 +680,7 @@ async function loadLink({preserveStep=false}={}){
       if(!preserveStep || !document.getElementById(uiState.step)?.classList.contains('active')){
         showStep('step-mode');
       }
+      if(!params.get('respin_success') && !params.get('boost_success')) resetPendingPaymentState();
     }
   }catch(e){
     console.error(e);
@@ -840,7 +955,7 @@ async function doRespin(type){
     }
     throw new Error(data.error||'Ошибка');
   }catch(e){
-    alert(e.message);
+    showToast(e.message || 'Ошибка платежа','error');
     btn.disabled=false;
     btn.innerHTML=original;
   }
@@ -899,14 +1014,23 @@ btnSteamCheck.addEventListener('click',async()=>{
       document.getElementById('steam-warning').classList.remove('visible');
       btnSteamCheck.disabled=false; btnSteamCheck.textContent='Продолжить';
     }else{
+      const warning=document.getElementById('steam-warning');
+      warning.classList.remove('profile-closed','games-closed');
+      if(data.profileClosed) warning.classList.add('profile-closed');
+      if(data.gamesClosed) warning.classList.add('games-closed');
+      const badge = data.profileClosed
+        ? '<div class="warning-badge">🔒 Профиль закрыт</div>'
+        : data.gamesClosed
+          ? '<div class="warning-badge">🎮 Игры скрыты</div>'
+          : '';
       document.getElementById('w-title').textContent='Ошибка';
-      document.getElementById('w-text').textContent=data.error;
-      document.getElementById('steam-warning').classList.add('visible');
+      document.getElementById('w-text').innerHTML=badge+data.error;
+      warning.classList.add('visible');
       document.getElementById('steam-card').classList.remove('visible');
       btnSteamCheck.disabled=false; btnSteamCheck.textContent='Проверить профиль';
     }
   }catch(e){
-    alert('Ошибка соединения');
+    showToast('Ошибка соединения','error');
     btnSteamCheck.disabled=false; btnSteamCheck.textContent='Проверить профиль';
   }
 });
@@ -946,7 +1070,7 @@ document.getElementById('btn-boost-buy').addEventListener('click',async()=>{
     }
     throw new Error(data.error||'Ошибка');
   }catch(e){
-    alert(e.message);
+    showToast(e.message || 'Ошибка платежа','error');
     btn.disabled=false; btn.textContent='Активировать буст';
   }
 });
@@ -966,10 +1090,10 @@ document.getElementById('btn-spin').addEventListener('click',async()=>{
       boosted:boostedSelected||linkData?.boosted||linkData?.boostPaid||false
     })});
     const data=await resp.json();
-    if(!data.ok){alert(data.error||'Ошибка');btn.disabled=false;btn.textContent='КРУТИТЬ';return;}
+    if(!data.ok){showToast(data.error||'Ошибка','error');btn.disabled=false;btn.textContent='КРУТИТЬ';return;}
     runSpinAnimation();
   }catch(e){
-    alert('Ошибка'); btn.disabled=false; btn.textContent='КРУТИТЬ';
+    showToast('Ошибка','error'); btn.disabled=false; btn.textContent='КРУТИТЬ';
   }
 });
 
@@ -1001,7 +1125,7 @@ document.getElementById('btn-reveal').addEventListener('click',async()=>{
     if(!data.ok) throw new Error(data.error||'Ошибка');
     await loadLink({preserveStep:true});
   }catch(e){
-    alert(e.message); btn.disabled=false; btn.textContent='Получить ключ';
+    showToast(e.message || 'Ошибка','error'); btn.disabled=false; btn.textContent='Получить ключ';
   }
 });
 
@@ -1012,6 +1136,23 @@ document.getElementById('btn-respin-boost')?.addEventListener('click',()=>doResp
   const p=new URLSearchParams(window.location.search);
   ['boost_failed','respin_failed'].forEach(key=>{if(p.get(key)==='1') updateUrlParam(key,null);});
 })();
+
+document.getElementById('btn-steam-help').addEventListener('click',()=>{
+  renderSteamHelp();
+  document.getElementById('modal-steam-help').classList.add('visible');
+});
+document.getElementById('btn-steam-help-close').addEventListener('click',()=>{
+  document.getElementById('modal-steam-help').classList.remove('visible');
+});
+document.getElementById('modal-steam-help').addEventListener('click',e=>{
+  if(e.target===e.currentTarget)e.currentTarget.classList.remove('visible');
+});
+
+window.addEventListener('resize',()=>{if(document.getElementById('modal-steam-help').classList.contains('visible')) renderSteamHelp();});
+
+document.addEventListener('DOMContentLoaded',()=>{
+  warmUpPaymentSystem();
+});
 </script>
 </body>
 </html>
