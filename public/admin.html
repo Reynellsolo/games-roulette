@@ -3,1100 +3,1464 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
-<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
-<title>Admin Panel</title>
+<meta name="robots" content="noindex, nofollow">
+<title>Admin — Games Roulette</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
+/* ═══════════════════════════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,sans-serif;background:#f0f2f5;color:#1e293b;line-height:1.5;min-height:100vh}
+a{color:#3b82f6;text-decoration:none}
+a:hover{text-decoration:underline}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit;font-size:14px}
 
-:root{
-  --bg:#f5f6fa;
-  --bg-card:#fff;
-  --bg-sidebar:#fff;
-  --bg-input:#f0f1f5;
-  --bg-hover:#f8f8fc;
-  --border:#e2e4ea;
-  --border-hover:#cccfe0;
-  --shadow:0 1px 4px rgba(0,0,0,0.06);
-  --shadow-lg:0 8px 30px rgba(0,0,0,0.12);
-  --text:#1a1a2e;
-  --text-dim:#6b7080;
-  --text-muted:#9ea3b0;
-  --tier1:#3b82f6;--tier2:#8b5cf6;--tier3:#ef4444;--tier4:#d97706;--tier5:#14b8a6;
-  --green:#16a34a;--orange:#ea580c;--red:#dc2626;--purple:#7c3aed;--blue:#2563eb;
+/* ═══════════════════════════════════════════════════════════════
+   AUTH OVERLAY
+   ═══════════════════════════════════════════════════════════════ */
+#auth-overlay{position:fixed;inset:0;z-index:9999;background:#f0f2f5;display:flex;align-items:center;justify-content:center}
+.auth-card{background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:center;max-width:380px;width:90%}
+.auth-card h2{margin-bottom:8px;font-size:24px}
+.auth-card p{color:#64748b;margin-bottom:24px;font-size:14px}
+.auth-card input{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;outline:none;transition:border .2s}
+.auth-card input:focus{border-color:#3b82f6}
+.auth-card .auth-btn{width:100%;padding:12px;margin-top:16px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;transition:background .2s}
+.auth-card .auth-btn:hover{background:#2563eb}
+.auth-error{color:#ef4444;font-size:13px;margin-top:8px;min-height:20px}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT: SIDEBAR + MAIN
+   ═══════════════════════════════════════════════════════════════ */
+#app{display:none;min-height:100vh}
+#app.visible{display:flex}
+#sidebar{width:260px;background:#1a1f2e;color:#cbd5e1;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s}
+#main-content{margin-left:260px;flex:1;padding:24px;min-height:100vh;overflow-y:auto}
+
+/* ═══════ Sidebar Styles ═══════ */
+.sidebar-header{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-header h1{font-size:18px;color:#fff;display:flex;align-items:center;gap:8px}
+.sidebar-header small{color:#64748b;font-size:12px;display:block;margin-top:4px}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
+.sidebar-nav a{display:flex;align-items:center;padding:10px 20px;color:#94a3b8;font-size:14px;font-weight:500;transition:all .15s;cursor:pointer;gap:10px;border-left:3px solid transparent}
+.sidebar-nav a:hover{background:rgba(255,255,255,.05);color:#e2e8f0;text-decoration:none}
+.sidebar-nav a.active{background:rgba(59,130,246,.12);color:#60a5fa;border-left-color:#3b82f6}
+.sidebar-nav .nav-icon{font-size:18px;width:24px;text-align:center;flex-shrink:0}
+.sidebar-nav .nav-label{flex:1}
+.sidebar-nav .nav-counter{background:#ef4444;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
+.sidebar-nav .nav-counter.zero{background:#475569}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#475569}
+.sidebar-footer button{background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer}
+.sidebar-footer button:hover{color:#fff}
+
+/* ═══════ Mobile hamburger ═══════ */
+#menu-toggle{display:none;position:fixed;top:12px;left:12px;z-index:200;background:#1a1f2e;color:#fff;border:none;border-radius:8px;width:40px;height:40px;font-size:20px}
+@media(max-width:768px){
+  #sidebar{transform:translateX(-100%)}
+  #sidebar.open{transform:translateX(0)}
+  #main-content{margin-left:0}
+  #menu-toggle{display:flex;align-items:center;justify-content:center}
 }
 
-body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;}
-@media(min-width:1600px){body{font-size:16px;}}
-@media(min-width:2000px){body{font-size:17px;}}
+/* ═══════════════════════════════════════════════════════════════
+   STATS BAR
+   ═══════════════════════════════════════════════════════════════ */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-card .stat-value{font-size:28px;font-weight:700;color:#1e293b}
+.stat-card .stat-label{font-size:12px;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.stat-card.accent-orange .stat-value{color:#f97316}
+.stat-card.accent-green .stat-value{color:#22c55e}
+.stat-card.accent-gray .stat-value{color:#94a3b8}
+.stat-card.accent-blue .stat-value{color:#3b82f6}
 
-/* ═══ LAYOUT ═══ */
-.layout{display:flex;min-height:100vh;}
+/* ═══════════════════════════════════════════════════════════════
+   SECTIONS
+   ═══════════════════════════════════════════════════════════════ */
+.section{display:none}
+.section.active{display:block}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.section-title{font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px}
+.section-subtitle{color:#64748b;font-size:14px;margin-bottom:20px}
+.refresh-btn{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;font-size:13px;color:#475569;transition:all .15s;display:flex;align-items:center;gap:6px}
+.refresh-btn:hover{background:#e2e8f0;color:#1e293b}
+.last-updated{font-size:12px;color:#94a3b8}
 
-.sidebar{
-  width:250px;background:var(--bg-sidebar);border-right:1px solid var(--border);
-  flex-shrink:0;position:sticky;top:0;height:100vh;
-  display:flex;flex-direction:column;box-shadow:2px 0 8px rgba(0,0,0,0.03);
-}
-@media(min-width:1600px){.sidebar{width:280px;}}
+/* ═══════════════════════════════════════════════════════════════
+   BADGES
+   ═══════════════════════════════════════════════════════════════ */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;line-height:1.4}
+.badge-tier{color:#fff;text-transform:uppercase;letter-spacing:.5px;font-size:10px;padding:3px 8px}
+.badge-starter{background:#6b7280}
+.badge-bronze{background:linear-gradient(135deg,#cd7f32,#b8860b)}
+.badge-silver{background:linear-gradient(135deg,#94a3b8,#64748b)}
+.badge-gold{background:linear-gradient(135deg,#f59e0b,#d97706)}
+.badge-diamond{background:linear-gradient(135deg,#3b82f6,#6366f1)}
+.badge-status-waiting{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}
+.badge-status-done{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.badge-status-unused{background:#f8fafc;color:#64748b;border:1px solid #e2e8f0}
+.badge-boost{background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;border:1px solid #fcd34d}
+.badge-exclude{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.badge-no-exclude{background:#fff7ed;color:#c2410c;border:1px solid #fdba74}
+.badge-respin{background:#f3e8ff;color:#7c3aed;border:1px solid #c4b5fd}
+.badge-premium{background:linear-gradient(135deg,#fce7f3,#e9d5ff);color:#a21caf;border:1px solid #d8b4fe}
+.badge-warning{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.badge-payment{background:#ecfdf5;color:#047857;border:1px solid #6ee7b7}
+.badges-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 
-.sidebar-logo{
-  padding:22px 20px;font-size:18px;font-weight:800;color:var(--text);
-  border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;
-}
-.sidebar-logo span{color:var(--purple);}
+/* ═══════════════════════════════════════════════════════════════
+   WAITING CARDS
+   ═══════════════════════════════════════════════════════════════ */
+.waiting-list{display:flex;flex-direction:column;gap:12px}
+.waiting-card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;transition:box-shadow .2s}
+.waiting-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.waiting-card.has-respin{border-left:4px solid #8b5cf6}
+.waiting-card.has-respin-premium{border-left:4px solid #d946ef}
 
-.sidebar-counter{
-  margin:16px;padding:18px;border-radius:14px;
-  background:linear-gradient(135deg,#fef2f2,#fee2e2);
-  border:1px solid #fecaca;text-align:center;cursor:pointer;transition:all .2s;
-}
-.sidebar-counter:hover{border-color:#f87171;box-shadow:0 2px 12px rgba(239,68,68,0.15);}
-.sidebar-counter-num{font-size:42px;font-weight:800;color:var(--red);line-height:1;}
-@media(min-width:1600px){.sidebar-counter-num{font-size:48px;}}
-.sidebar-counter-label{font-size:12px;color:#b91c1c;text-transform:uppercase;letter-spacing:1px;margin-top:5px;font-weight:600;}
+/* Respin banner at top of card */
+.respin-banner{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;font-size:13px;font-weight:600}
+.respin-banner.normal{background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#5b21b6}
+.respin-banner.premium{background:linear-gradient(135deg,#fce7f3,#f5d0fe);color:#86198f}
+.respin-banner .dismiss-btn{background:none;border:none;color:inherit;opacity:.6;font-size:18px;padding:2px 6px;border-radius:4px;transition:opacity .15s}
+.respin-banner .dismiss-btn:hover{opacity:1;background:rgba(0,0,0,.08)}
 
-.sidebar-nav{flex:1;padding:10px 0;overflow-y:auto;}
-.nav-item{
-  display:flex;align-items:center;gap:10px;
-  padding:13px 22px;cursor:pointer;color:var(--text-dim);
-  font-size:15px;font-weight:500;transition:all .15s;
-  border-left:3px solid transparent;
-}
-@media(min-width:1600px){.nav-item{padding:15px 24px;font-size:16px;}}
-.nav-item:hover{background:var(--bg-hover);color:var(--text);}
-.nav-item.active{background:#f5f3ff;color:var(--purple);border-left-color:var(--purple);font-weight:600;}
-.nav-icon{font-size:18px;width:24px;text-align:center;}
+.waiting-card-body{display:flex;align-items:flex-start;padding:16px;gap:14px;flex-wrap:wrap}
+.waiting-avatar{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;background:#e2e8f0}
+.waiting-avatar-placeholder{width:44px;height:44px;border-radius:10px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:20px;color:#94a3b8;flex-shrink:0}
+.waiting-info{flex:1;min-width:180px}
+.waiting-steam-name{font-weight:600;font-size:15px;color:#1e293b}
+.waiting-meta{font-size:12px;color:#94a3b8;margin-top:2px;display:flex;flex-wrap:wrap;gap:8px}
+.waiting-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.assign-btn{background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;transition:background .15s}
+.assign-btn:hover{background:#2563eb}
+.open-link-btn{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:13px;color:#64748b;transition:all .15s}
+.open-link-btn:hover{background:#e2e8f0;color:#1e293b}
 
-.main{flex:1;padding:28px 36px;overflow-y:auto;}
-@media(min-width:1400px){.main{padding:32px 48px;}}
-@media(min-width:1800px){.main{padding:36px 64px;}}
-@media(max-width:768px){.sidebar{display:none;}.main{padding:16px;}}
+/* ═══════════════════════════════════════════════════════════════
+   EMPTY STATE
+   ═══════════════════════════════════════════════════════════════ */
+.empty-state{text-align:center;padding:60px 20px;color:#94a3b8}
+.empty-state .empty-icon{font-size:48px;margin-bottom:12px}
+.empty-state .empty-text{font-size:16px;font-weight:500}
+.empty-state .empty-sub{font-size:13px;margin-top:4px}
 
-/* ═══ SECTION ═══ */
-.section{display:none;}
-.section.active{display:block;animation:fadeUp .25s ease;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+/* ═══════════════════════════════════════════════════════════════
+   TABLES
+   ═══════════════════════════════════════════════════════════════ */
+.table-container{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden}
+.table-toolbar{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap}
+.table-toolbar select,.table-toolbar input{padding:7px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;background:#f8fafc}
+.table-toolbar select:focus,.table-toolbar input:focus{border-color:#3b82f6}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{text-align:left;padding:10px 14px;background:#f8fafc;color:#64748b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+.data-table td{padding:10px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.data-table tbody tr:hover{background:#f8fafc}
+.data-table .code-cell{font-family:'SF Mono',SFMono-Regular,Consolas,monospace;font-size:12px;color:#64748b;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.data-table .actions-cell{white-space:nowrap}
+.data-table .actions-cell button{background:none;border:none;padding:4px 8px;border-radius:6px;font-size:13px;cursor:pointer;transition:background .15s}
+.data-table .actions-cell button:hover{background:#f1f5f9}
+.data-table .actions-cell .delete-btn:hover{background:#fef2f2;color:#ef4444}
 
-.section-title{
-  font-size:22px;font-weight:700;margin-bottom:22px;
-  display:flex;align-items:center;gap:10px;color:var(--text);
-}
-@media(min-width:1600px){.section-title{font-size:24px;}}
+/* ═══════════════════════════════════════════════════════════════
+   GENERATOR
+   ═══════════════════════════════════════════════════════════════ */
+.generator-card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.06);max-width:500px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px}
+.form-input,.form-select{width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;transition:border .2s;background:#fff}
+.form-input:focus,.form-select:focus{border-color:#3b82f6}
+.form-row{display:flex;gap:12px}
+.form-row>*{flex:1}
+.btn{padding:10px 20px;border:none;border-radius:10px;font-size:14px;font-weight:600;transition:all .15s}
+.btn-primary{background:#3b82f6;color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-primary:disabled{background:#94a3b8;cursor:not-allowed}
+.btn-secondary{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
+.btn-secondary:hover{background:#e2e8f0}
+.btn-success{background:#22c55e;color:#fff}
+.btn-success:hover{background:#16a34a}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-danger:hover{background:#dc2626}
+.btn-sm{padding:6px 14px;font-size:12px;border-radius:8px}
 
-/* ═══ CARD ═══ */
-.card{
-  background:var(--bg-card);border:1px solid var(--border);
-  border-radius:14px;padding:26px;margin-bottom:22px;box-shadow:var(--shadow);
-}
+.generated-links{margin-top:20px}
+.generated-links-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.generated-link-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-radius:8px;margin-bottom:6px;font-size:13px}
+.generated-link-item .link-url{flex:1;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#3b82f6}
+.copy-btn{background:none;border:1px solid #e2e8f0;border-radius:6px;padding:4px 10px;font-size:12px;color:#64748b;transition:all .15s}
+.copy-btn:hover{background:#e2e8f0;color:#1e293b}
+.copy-btn.copied{background:#dcfce7;border-color:#86efac;color:#15803d}
 
-/* ═══ FORM ═══ */
-.form-row{display:flex;gap:14px;margin-bottom:18px;align-items:flex-end;flex-wrap:wrap;}
-.form-group{display:flex;flex-direction:column;gap:6px;}
-.form-group label{font-size:12px;font-weight:600;color:var(--text-dim);}
-@media(min-width:1600px){.form-group label{font-size:13px;}}
-.form-group input,.form-group select{
-  padding:11px 16px;background:var(--bg-input);border:1px solid var(--border);
-  border-radius:9px;color:var(--text);font-size:15px;outline:none;transition:border .2s;
-}
-@media(min-width:1600px){.form-group input,.form-group select{padding:12px 18px;font-size:16px;}}
-.form-group input:focus,.form-group select:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(124,58,237,0.08);}
-.form-group input::placeholder{color:var(--text-muted);}
+/* ═══════════════════════════════════════════════════════════════
+   SEARCH
+   ═══════════════════════════════════════════════════════════════ */
+.search-box{max-width:500px;margin-bottom:20px;position:relative}
+.search-box input{width:100%;padding:12px 16px 12px 42px;border:2px solid #e2e8f0;border-radius:12px;font-size:15px;outline:none;transition:border .2s}
+.search-box input:focus{border-color:#3b82f6}
+.search-box .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;color:#94a3b8}
 
-/* ═══ BUTTONS ═══ */
-.btn{
-  padding:11px 22px;border:none;border-radius:9px;font-size:14px;font-weight:600;
-  cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;
-  min-height:44px;
-}
-@media(min-width:1600px){.btn{padding:12px 24px;font-size:15px;}}
-.btn:disabled{opacity:.4;cursor:not-allowed;}
-.btn-sm{padding:7px 14px;font-size:13px;border-radius:8px;min-height:36px;}
-.btn-xs{padding:5px 10px;font-size:12px;border-radius:7px;min-height:30px;}
+/* ═══════════════════════════════════════════════════════════════
+   IMPORT
+   ═══════════════════════════════════════════════════════════════ */
+.import-card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.06);max-width:600px}
+.upload-area{border:2px dashed #cbd5e1;border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px}
+.upload-area:hover{border-color:#3b82f6;background:#f8fafc}
+.upload-area.dragover{border-color:#3b82f6;background:#eff6ff}
+.upload-area .upload-icon{font-size:40px;margin-bottom:8px}
+.upload-area .upload-text{font-size:14px;color:#64748b}
+.import-preview{margin-top:16px;max-height:300px;overflow:auto}
 
-.btn-purple{background:var(--purple);color:#fff;}.btn-purple:hover:not(:disabled){background:#6d28d9;}
-.btn-green{background:var(--green);color:#fff;}.btn-green:hover:not(:disabled){background:#15803d;}
-.btn-red{background:var(--red);color:#fff;}.btn-red:hover:not(:disabled){background:#b91c1c;}
-.btn-blue{background:var(--blue);color:#fff;}.btn-blue:hover:not(:disabled){background:#1d4ed8;}
-.btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border);}
-.btn-ghost:hover:not(:disabled){border-color:var(--border-hover);color:var(--text);background:var(--bg-hover);}
-.btn-orange{background:var(--orange);color:#fff;}
+/* ═══════════════════════════════════════════════════════════════
+   HISTORY TABS
+   ═══════════════════════════════════════════════════════════════ */
+.tabs{display:flex;gap:4px;margin-bottom:16px}
+.tab{padding:8px 18px;border:none;background:#f1f5f9;color:#64748b;border-radius:8px;font-size:13px;font-weight:600;transition:all .15s}
+.tab.active{background:#3b82f6;color:#fff}
+.tab:hover:not(.active){background:#e2e8f0}
 
-/* ═══ TABLE ═══ */
-.table-wrap{overflow-x:auto;}
-table{width:100%;border-collapse:collapse;font-size:14px;}
-@media(min-width:1600px){table{font-size:15px;}}
-th{
-  text-align:left;padding:12px 14px;font-size:12px;font-weight:600;
-  color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;
-  border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg);
-  position:sticky;top:0;z-index:2;
-}
-@media(min-width:1600px){th{padding:14px 16px;font-size:13px;}}
-td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
-@media(min-width:1600px){td{padding:14px 16px;}}
-tr:hover td{background:var(--bg-hover);}
+/* ═══════════════════════════════════════════════════════════════
+   MODAL
+   ═══════════════════════════════════════════════════════════════ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.visible{display:flex}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid #f1f5f9}
+.modal-header h3{font-size:18px;font-weight:700}
+.modal-close{background:none;border:none;font-size:22px;color:#94a3b8;padding:4px 8px;border-radius:6px;transition:all .15s}
+.modal-close:hover{background:#f1f5f9;color:#1e293b}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:16px 24px 20px;border-top:1px solid #f1f5f9;display:flex;gap:10px;justify-content:flex-end}
 
-/* ═══ TIER BADGE ═══ */
-.tier{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:5px 12px;border-radius:8px;
-  font-size:13px;font-weight:700;color:#fff;white-space:nowrap;
-}
-@media(min-width:1600px){.tier{padding:6px 14px;font-size:14px;}}
-.tier-starter{background:var(--tier1);}
-.tier-bronze{background:var(--tier2);}
-.tier-silver{background:var(--tier3);}
-.tier-gold{background:linear-gradient(135deg,#d97706,#f59e0b);box-shadow:0 2px 8px rgba(217,119,6,0.25);}
-.tier-diamond{background:var(--tier5);}
+/* Modal: Steam profile card */
+.steam-profile-card{display:flex;align-items:center;gap:14px;padding:14px;background:#f8fafc;border-radius:10px;margin-bottom:16px}
+.steam-profile-card img{width:52px;height:52px;border-radius:10px}
+.steam-profile-card .steam-profile-info h4{font-size:15px;font-weight:600}
+.steam-profile-card .steam-profile-info p{font-size:12px;color:#64748b;margin-top:2px}
 
-.tier-sm{padding:3px 10px;font-size:12px;border-radius:7px;}
+/* Modal: info grid */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.info-item{font-size:13px}
+.info-item .info-label{color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.info-item .info-value{font-weight:600;margin-top:2px}
 
-/* ═══ BADGES ═══ */
-.badge{
-  display:inline-flex;align-items:center;gap:3px;
-  padding:4px 10px;border-radius:7px;font-size:11px;font-weight:700;
-  text-transform:uppercase;letter-spacing:.3px;
-}
-@media(min-width:1600px){.badge{padding:5px 12px;font-size:12px;}}
-.badge-waiting{background:#fff7ed;color:var(--orange);border:1px solid #fed7aa;}
-.badge-done{background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0;}
-.badge-boost{background:#fffbeb;color:#b45309;border:1px solid #fde68a;}
-.badge-respin{background:#fff7ed;color:var(--orange);border:1px solid #fed7aa;}
-.badge-respin-premium{background:#faf5ff;color:var(--purple);border:1px solid #e9d5ff;}
-.badge-exclude{background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0;}
-.badge-no{background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border);}
-.badge-imported{background:var(--bg-input);color:var(--text-dim);border:1px solid var(--border);}
-.badge-system{background:#eff6ff;color:var(--blue);border:1px solid #bfdbfe;}
+/* Modal: old key block */
+.old-key-block{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px}
+.old-key-block .old-key-title{font-weight:700;color:#dc2626;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.old-key-block .old-key-value{font-family:monospace;color:#1e293b;word-break:break-all}
 
-/* ═══ AVATAR ═══ */
-.avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--border);}
-@media(min-width:1600px){.avatar{width:42px;height:42px;}}
-.avatar-placeholder{
-  width:38px;height:38px;border-radius:50%;background:var(--bg-input);
-  display:flex;align-items:center;justify-content:center;
-  font-size:15px;color:var(--text-muted);border:2px solid var(--border);
-}
-@media(min-width:1600px){.avatar-placeholder{width:42px;height:42px;}}
+/* ═══════════════════════════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════════════════════════ */
+#toast-container{position:fixed;top:20px;right:20px;z-index:9000;display:flex;flex-direction:column;gap:8px;max-width:360px}
+.toast{padding:12px 18px;border-radius:10px;font-size:14px;font-weight:500;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);animation:toastIn .25s ease;display:flex;align-items:center;gap:8px}
+.toast.success{background:#22c55e}
+.toast.error{background:#ef4444}
+.toast.info{background:#3b82f6}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+.toast.hiding{animation:toastOut .2s ease forwards}
+@keyframes toastOut{to{opacity:0;transform:translateX(40px)}}
 
-/* ═══ RESPIN ═══ */
-.respin-row{position:relative;}
-.respin-banner{
-  position:absolute;inset:0;z-index:5;display:flex;align-items:center;
-  justify-content:center;gap:8px;cursor:pointer;border-radius:6px;
-  transition:opacity .2s;font-size:14px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
-}
-.respin-banner:hover{opacity:.85;}
-.respin-banner-normal{background:rgba(234,88,12,0.92);color:#fff;}
-.respin-banner-premium{background:linear-gradient(135deg,rgba(124,58,237,0.93),rgba(217,119,6,0.9));color:#fff;}
-.respin-banner.hidden{display:none;}
-
-/* ═══ MODAL — WIDE WITH SIDE SEARCH ═══ */
-.modal-overlay{
-  display:none;position:fixed;inset:0;z-index:9000;
-  background:rgba(0,0,0,0.35);backdrop-filter:blur(4px);
-  align-items:center;justify-content:center;padding:20px;
-}
-.modal-overlay.visible{display:flex;}
-
-.modal-container{
-  display:flex;gap:0;max-width:960px;width:100%;max-height:90vh;
-  border-radius:18px;overflow:hidden;box-shadow:var(--shadow-lg);
-  animation:fadeUp .2s ease;
-}
-@media(min-width:1600px){.modal-container{max-width:1100px;}}
-@media(max-width:800px){.modal-container{flex-direction:column;max-width:520px;}}
-
-.modal-left{
-  flex:1;background:#fff;padding:30px;overflow-y:auto;
-  border-right:1px solid var(--border);
-}
-@media(max-width:800px){.modal-left{border-right:none;border-bottom:1px solid var(--border);}}
-
-.modal-right{
-  width:380px;background:var(--bg);padding:24px;overflow-y:auto;
-  flex-shrink:0;
-}
-@media(min-width:1600px){.modal-right{width:420px;}}
-@media(max-width:800px){.modal-right{width:100%;max-height:300px;}}
-
-.modal-title{font-size:18px;font-weight:700;margin-bottom:20px;display:flex;align-items:center;gap:8px;}
-@media(min-width:1600px){.modal-title{font-size:20px;}}
-
-.modal-info{
-  background:var(--bg);border:1px solid var(--border);border-radius:11px;
-  padding:16px;margin-bottom:20px;
-}
-.modal-info-row{
-  display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:14px;
-}
-@media(min-width:1600px){.modal-info-row{font-size:15px;}}
-.modal-info-row:last-child{margin-bottom:0;}
-.modal-info-label{color:var(--text-dim);width:130px;flex-shrink:0;font-weight:500;}
-.modal-info-value{color:var(--text);font-weight:600;min-width:0;}
-.modal-info-value a{color:var(--blue);text-decoration:none;}
-.modal-info-value a:hover{text-decoration:underline;}
-
-/* Truncated link */
-.steam-link-wrap{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;}
-.steam-link-text{
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;
-  display:inline-block;
-}
-@media(min-width:1600px){.steam-link-text{max-width:280px;}}
-
-.modal-form-group{margin-bottom:16px;}
-.modal-form-group label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:6px;}
-@media(min-width:1600px){.modal-form-group label{font-size:13px;}}
-.modal-form-group input{
-  width:100%;padding:11px 16px;background:var(--bg-input);border:1px solid var(--border);
-  border-radius:9px;color:var(--text);font-size:15px;outline:none;transition:border .2s;
-}
-@media(min-width:1600px){.modal-form-group input{padding:12px 18px;font-size:16px;}}
-.modal-form-group input:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(124,58,237,0.08);}
-.modal-form-group input::placeholder{color:var(--text-muted);}
-
-.modal-actions{display:flex;gap:12px;margin-top:22px;}
-.modal-actions .btn{flex:1;justify-content:center;padding:13px;}
-
-/* Modal right side search */
-.modal-search-title{font-size:15px;font-weight:700;margin-bottom:12px;color:var(--text);}
-.modal-search-input{
-  width:100%;padding:10px 14px;background:#fff;border:1px solid var(--border);
-  border-radius:8px;font-size:14px;color:var(--text);outline:none;margin-bottom:14px;
-}
-.modal-search-input:focus{border-color:var(--purple);}
-.modal-search-input::placeholder{color:var(--text-muted);}
-
-.modal-search-results{max-height:400px;overflow-y:auto;}
-.modal-search-item{
-  background:#fff;border:1px solid var(--border);border-radius:9px;
-  padding:10px 14px;margin-bottom:8px;font-size:13px;
-}
-.modal-search-item-game{font-weight:600;color:var(--text);margin-bottom:3px;}
-.modal-search-item-meta{font-size:12px;color:var(--text-dim);}
-.modal-search-empty{color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;}
-
-/* ═══ CONFIRM MODAL ═══ */
-.confirm-overlay{
-  display:none;position:fixed;inset:0;z-index:9500;
-  background:rgba(0,0,0,0.4);backdrop-filter:blur(3px);
-  align-items:center;justify-content:center;padding:20px;
-}
-.confirm-overlay.visible{display:flex;}
-.confirm-box{
-  background:#fff;border-radius:16px;padding:30px;max-width:400px;width:100%;
-  box-shadow:var(--shadow-lg);text-align:center;animation:fadeUp .2s ease;
-}
-.confirm-text{font-size:16px;color:var(--text);margin-bottom:22px;line-height:1.5;}
-.confirm-actions{display:flex;gap:12px;justify-content:center;}
-.confirm-actions .btn{min-width:110px;justify-content:center;padding:11px 22px;}
-
-/* ═══ TOAST ═══ */
-.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
-.toast{
-  background:#fff;color:var(--text);padding:14px 22px;
-  border-radius:12px;font-size:15px;font-weight:500;
-  box-shadow:0 4px 24px rgba(0,0,0,0.12);border-left:4px solid var(--green);
-  transform:translateX(120%);opacity:0;transition:all .3s ease;
-  display:flex;align-items:center;gap:8px;
-}
-.toast.visible{transform:translateX(0);opacity:1;}
-.toast.error{border-left-color:var(--red);}
-.toast.info{border-left-color:var(--blue);}
-
-/* ═══ GEN LINKS ═══ */
-.gen-links-list{margin-top:14px;}
-.gen-link-item{
-  display:flex;align-items:center;gap:10px;
-  padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:9px;
-  margin-bottom:7px;font-family:monospace;font-size:14px;color:var(--text);
-  cursor:pointer;transition:background .15s;word-break:break-all;
-}
-.gen-link-item:hover{background:#f0eeff;}
-.gen-link-item .copy-btn{flex-shrink:0;}
-
-/* ═══ COPY BUTTON ═══ */
-.copy-btn{
-  background:none;border:1px solid var(--border);border-radius:7px;
-  padding:4px 9px;cursor:pointer;font-size:13px;color:var(--text-dim);
-  transition:all .15s;display:inline-flex;align-items:center;gap:3px;
-}
-.copy-btn:hover{border-color:var(--purple);color:var(--purple);background:#faf5ff;}
-
-/* ═══ LINK CELL — clickable ═══ */
-.link-cell{
-  display:flex;align-items:center;gap:7px;cursor:pointer;
-  font-family:monospace;font-size:13px;color:var(--blue);
-  transition:color .15s;
-}
-.link-cell:hover{color:var(--purple);text-decoration:underline;}
-.link-code{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-@media(min-width:1600px){.link-code{max-width:200px;}}
-
-/* ═══ FILTERS ═══ */
-.filters{display:flex;gap:7px;margin-bottom:18px;flex-wrap:wrap;align-items:center;}
-.filter-btn{
-  padding:7px 16px;border-radius:8px;border:1px solid var(--border);
-  background:#fff;color:var(--text-dim);font-size:13px;font-weight:600;
-  cursor:pointer;transition:all .15s;min-height:36px;
-}
-@media(min-width:1600px){.filter-btn{padding:8px 18px;font-size:14px;}}
-.filter-btn:hover{border-color:var(--border-hover);color:var(--text);}
-.filter-btn.active{background:var(--purple);color:#fff;border-color:var(--purple);}
-
-/* ═══ SEARCH ═══ */
-.search-input{
-  padding:11px 18px;background:var(--bg-input);border:1px solid var(--border);
-  border-radius:9px;color:var(--text);font-size:15px;outline:none;
-  width:100%;max-width:450px;transition:border .2s;
-}
-@media(min-width:1600px){.search-input{font-size:16px;max-width:500px;}}
-.search-input:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(124,58,237,0.08);}
-.search-input::placeholder{color:var(--text-muted);}
-
-/* ═══ DROP ZONE ═══ */
-.drop-zone{
-  border:2px dashed var(--border);border-radius:14px;
-  padding:44px;text-align:center;cursor:pointer;
-  transition:all .2s;color:var(--text-dim);
-}
-.drop-zone:hover{border-color:var(--purple);color:var(--text);background:#faf5ff;}
-.drop-zone.dragover{border-color:var(--purple);background:#f5f3ff;}
-
-/* ═══ KEY HIDDEN ═══ */
-.key-cell{font-family:monospace;color:var(--text-muted);cursor:pointer;font-size:13px;}
-.key-cell:hover{color:var(--text);}
-
-/* ═══ EMPTY ═══ */
-.empty-state{text-align:center;padding:44px 20px;color:var(--text-dim);}
-.empty-state-icon{font-size:48px;margin-bottom:12px;}
-.empty-state-text{font-size:16px;}
-
-/* ═══ FLAG ═══ */
-.flag-img{width:22px;height:16px;border-radius:3px;object-fit:cover;vertical-align:middle;}
-
-/* ═══ SPINNER ═══ */
-.spinner-sm{display:inline-block;width:15px;height:15px;border:2px solid rgba(0,0,0,0.1);border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY
+   ═══════════════════════════════════════════════════════════════ */
+.text-muted{color:#94a3b8}
+.text-sm{font-size:12px}
+.mt-2{margin-top:8px}
+.mt-4{margin-top:16px}
+.mb-2{margin-bottom:8px}
+.gap-2{gap:8px}
+.flex{display:flex}
+.items-center{align-items:center}
+.justify-between{justify-content:space-between}
+.hidden{display:none!important}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note-text{font-size:12px;color:#94a3b8;font-style:italic;margin-top:4px}
 </style>
 </head>
 <body>
 
-<div class="layout">
-  <div class="sidebar">
-    <div class="sidebar-logo">🎮 <span>Admin</span></div>
-    <div class="sidebar-counter" onclick="switchSection('waiting')">
-      <div class="sidebar-counter-num" id="waiting-count">0</div>
-      <div class="sidebar-counter-label">Ожидают ключ</div>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-item active" data-section="waiting"><span class="nav-icon">🔑</span> Ожидают ключ</div>
-      <div class="nav-item" data-section="generator"><span class="nav-icon">🔗</span> Генератор</div>
-      <div class="nav-item" data-section="links"><span class="nav-icon">📋</span> Все ссылки</div>
-      <div class="nav-item" data-section="history"><span class="nav-icon">📜</span> История</div>
-      <div class="nav-item" data-section="import"><span class="nav-icon">📥</span> Импорт</div>
-    </div>
+<!-- ═══════════════════════════════════════════════════════════════
+     AUTH OVERLAY — простой ввод токена
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="auth-overlay">
+  <div class="auth-card">
+    <h2>🔐 Админ-панель</h2>
+    <p>Games Roulette Management</p>
+    <input type="password" id="token-input" placeholder="Введите API Token" autocomplete="off">
+    <button class="auth-btn" onclick="login()">Войти</button>
+    <div class="auth-error" id="auth-error"></div>
   </div>
+</div>
 
-  <div class="main">
+<!-- ═══════════════════════════════════════════════════════════════
+     HAMBURGER (мобильная кнопка)
+     ═══════════════════════════════════════════════════════════════ -->
+<button id="menu-toggle" onclick="toggleSidebar()">☰</button>
 
-    <!-- ═══ ОЖИДАЮТ КЛЮЧ ═══ -->
-    <div class="section active" id="sec-waiting">
-      <div class="section-title">🔑 Ожидают ключ <span class="badge badge-waiting" id="waiting-badge" style="font-size:14px;">0</span></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>Уровень</th><th>Аватар</th><th>Никнейм</th><th>Регион</th><th>Исключение</th><th>Допы</th><th>Действие</th>
-          </tr></thead>
-          <tbody id="waiting-tbody"></tbody>
-        </table>
-      </div>
-      <div class="empty-state" id="waiting-empty" style="display:none;">
-        <div class="empty-state-icon">✅</div>
-        <div class="empty-state-text">Все ключи выданы!</div>
-      </div>
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN APP LAYOUT
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="app">
+  <!-- ═══════ SIDEBAR ═══════ -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <h1>🎰 Roulette</h1>
+      <small>Admin Panel v1.0</small>
     </div>
+    <nav class="sidebar-nav">
+      <a data-section="waiting" class="active" onclick="showSection('waiting')">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Ожидают ключ</span>
+        <span class="nav-counter zero" id="cnt-waiting">0</span>
+      </a>
+      <a data-section="generator" onclick="showSection('generator')">
+        <span class="nav-icon">➕</span>
+        <span class="nav-label">Генератор</span>
+      </a>
+      <a data-section="links" onclick="showSection('links')">
+        <span class="nav-icon">🔗</span>
+        <span class="nav-label">Все ссылки</span>
+        <span class="nav-counter zero" id="cnt-total">0</span>
+      </a>
+      <a data-section="history" onclick="showSection('history')">
+        <span class="nav-icon">📜</span>
+        <span class="nav-label">История</span>
+      </a>
+      <a data-section="search" onclick="showSection('search')">
+        <span class="nav-icon">🔍</span>
+        <span class="nav-label">Поиск</span>
+      </a>
+      <a data-section="import" onclick="showSection('import')">
+        <span class="nav-icon">📥</span>
+        <span class="nav-label">Импорт Excel</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button onclick="logout()">🚪 Выйти</button>
+    </div>
+  </aside>
 
-    <!-- ═══ ГЕНЕРАТОР ═══ -->
-    <div class="section" id="sec-generator">
-      <div class="section-title">🔗 Генератор ссылок</div>
-      <div class="card">
+  <!-- ═══════ MAIN CONTENT ═══════ -->
+  <main id="main-content">
+
+    <!-- ═══════ STATS BAR ═══════ -->
+    <div class="stats-bar" id="stats-bar"></div>
+
+    <!-- ═══════ SECTION: WAITING ═══════ -->
+    <section class="section active" id="section-waiting">
+      <div class="section-header">
+        <h2 class="section-title">📋 Ожидают ключ</h2>
+        <div class="flex items-center gap-2">
+          <span class="last-updated" id="last-updated"></span>
+          <button class="refresh-btn" onclick="loadAllData()">🔄 Обновить</button>
+        </div>
+      </div>
+      <div class="waiting-list" id="waiting-list"></div>
+    </section>
+
+    <!-- ═══════ SECTION: GENERATOR ═══════ -->
+    <section class="section" id="section-generator">
+      <div class="section-header">
+        <h2 class="section-title">➕ Генератор ссылок</h2>
+      </div>
+      <div class="generator-card">
         <div class="form-row">
           <div class="form-group">
-            <label>Количество</label>
-            <input type="number" id="gen-count" value="1" min="1" max="100" style="width:90px;">
+            <label class="form-label">Количество</label>
+            <input type="number" class="form-input" id="gen-count" value="1" min="1" max="500">
           </div>
           <div class="form-group">
-            <label>Уровень</label>
-            <select id="gen-tier">
-              <option value="starter">Уровень 1 — Standard</option>
-              <option value="bronze">Уровень 2 — Premium</option>
-              <option value="silver">Уровень 3 — Elite</option>
-              <option value="gold">Уровень 4 — Gold</option>
-              <option value="diamond">Уровень 5 — Deluxe</option>
+            <label class="form-label">Тир</label>
+            <select class="form-select" id="gen-tier">
+              <option value="starter">Starter</option>
+              <option value="bronze">Bronze</option>
+              <option value="silver" selected>Silver</option>
+              <option value="gold">Gold</option>
+              <option value="diamond">Diamond</option>
             </select>
           </div>
-          <div class="form-group"><label>&nbsp;</label><button class="btn btn-purple" id="btn-generate">Сгенерировать</button></div>
         </div>
-      </div>
-      <div class="card" id="gen-result" style="display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <strong>Сгенерированные ссылки</strong>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-sm btn-ghost" id="btn-copy-all">📋 Копировать все</button>
-            <button class="btn btn-sm btn-ghost" id="btn-export-txt">💾 TXT</button>
-          </div>
+        <div class="form-group">
+          <label class="form-label">Заметка (опционально)</label>
+          <input type="text" class="form-input" id="gen-note" placeholder="Напр.: Для маркетплейса">
         </div>
-        <div id="gen-links-list" class="gen-links-list"></div>
+        <button class="btn btn-primary" id="gen-btn" onclick="generateLinks()" style="width:100%">Сгенерировать</button>
+        <div id="gen-results"></div>
       </div>
-    </div>
+    </section>
 
-    <!-- ═══ ВСЕ ССЫЛКИ ═══ -->
-    <div class="section" id="sec-links">
-      <div class="section-title">📋 Все ссылки</div>
-      <div class="filters" id="links-filters">
-        <button class="filter-btn active" data-filter="all">Все</button>
-        <button class="filter-btn" data-filter="unused">Свободные</button>
-        <button class="filter-btn" data-filter="used">Использованные</button>
-        <span style="width:1px;height:20px;background:var(--border);margin:0 4px;"></span>
-        <button class="filter-btn" data-filter="starter" style="color:var(--tier1)">1 Standard</button>
-        <button class="filter-btn" data-filter="bronze" style="color:var(--tier2)">2 Premium</button>
-        <button class="filter-btn" data-filter="silver" style="color:var(--tier3)">3 Elite</button>
-        <button class="filter-btn" data-filter="gold" style="color:var(--tier4)">4 Gold</button>
-        <button class="filter-btn" data-filter="diamond" style="color:var(--tier5)">5 Deluxe</button>
+    <!-- ═══════ SECTION: ALL LINKS ═══════ -->
+    <section class="section" id="section-links">
+      <div class="section-header">
+        <h2 class="section-title">🔗 Все ссылки</h2>
+        <button class="refresh-btn" onclick="loadAllData()">🔄 Обновить</button>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Ссылка</th><th>Уровень</th><th>Статус</th><th>Создана</th><th></th></tr></thead>
-          <tbody id="links-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ═══ ИСТОРИЯ ═══ -->
-    <div class="section" id="sec-history">
-      <div class="section-title">📜 История заказов</div>
-      <div class="form-row" style="margin-bottom:18px;">
-        <input type="text" class="search-input" id="history-search" placeholder="Поиск: ФИО, никнейм, игра, заказ, ключ...">
-        <button class="btn btn-sm btn-ghost" id="btn-export-csv">📊 CSV</button>
-      </div>
-      <div class="filters" id="history-filters">
-        <button class="filter-btn active" data-hfilter="all">Все</button>
-        <button class="filter-btn" data-hfilter="starter" style="color:var(--tier1)">1</button>
-        <button class="filter-btn" data-hfilter="bronze" style="color:var(--tier2)">2</button>
-        <button class="filter-btn" data-hfilter="silver" style="color:var(--tier3)">3</button>
-        <button class="filter-btn" data-hfilter="gold" style="color:var(--tier4)">4</button>
-        <button class="filter-btn" data-hfilter="diamond" style="color:var(--tier5)">5</button>
-        <button class="filter-btn" data-hfilter="imported">Импорт</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Заказ</th><th>ФИО</th><th>Steam</th><th>Уровень</th><th>Игра</th><th>Ключ</th><th>Допы</th></tr></thead>
-          <tbody id="history-tbody"></tbody>
-        </table>
-      </div>
-      <div class="empty-state" id="history-empty" style="display:none;">
-        <div class="empty-state-icon">📜</div>
-        <div class="empty-state-text">Ничего не найдено</div>
-      </div>
-    </div>
-
-    <!-- ═══ ИМПОРТ ═══ -->
-    <div class="section" id="sec-import">
-      <div class="section-title">📥 Импорт базы</div>
-      <div class="card">
-        <p style="color:var(--text-dim);margin-bottom:18px;font-size:15px;">
-          Excel (.xlsx): <strong>ИГРА</strong>, <strong>КЛЮЧ</strong>, <strong>НОМЕР ЗАКАЗА</strong>, <strong>ФИО</strong>
-        </p>
-        <div class="drop-zone" id="drop-zone">
-          <div style="font-size:30px;margin-bottom:8px;">📎</div>
-          <div>Перетащите или нажмите для выбора</div>
-          <input type="file" id="import-file" accept=".xlsx,.xls" style="display:none;">
+      <div class="table-container">
+        <div class="table-toolbar">
+          <select id="filter-tier" onchange="renderAllLinks()">
+            <option value="all">Все тиры</option>
+            <option value="starter">Starter</option>
+            <option value="bronze">Bronze</option>
+            <option value="silver">Silver</option>
+            <option value="gold">Gold</option>
+            <option value="diamond">Diamond</option>
+          </select>
+          <select id="filter-status" onchange="renderAllLinks()">
+            <option value="all">Все статусы</option>
+            <option value="waiting">Ожидают</option>
+            <option value="completed">Готовы</option>
+            <option value="unused">Не использованы</option>
+          </select>
+          <input type="text" id="filter-search" placeholder="Поиск по коду/имени/игре…" oninput="renderAllLinks()">
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Код</th>
+                <th>Тир</th>
+                <th>Статус</th>
+                <th>Steam</th>
+                <th>Игра</th>
+                <th>Создан</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="links-tbody"></tbody>
+          </table>
         </div>
       </div>
-      <div class="card" id="import-preview" style="display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-          <strong>Предпросмотр (<span id="import-total">0</span> записей)</strong>
-          <button class="btn btn-green" id="btn-import-confirm">✅ Импортировать</button>
-        </div>
-        <div class="table-wrap">
-          <table><thead><tr><th>Игра</th><th>Ключ</th><th>Заказ</th><th>ФИО</th></tr></thead>
-          <tbody id="import-tbody"></tbody></table>
+    </section>
+
+    <!-- ═══════ SECTION: HISTORY ═══════ -->
+    <section class="section" id="section-history">
+      <div class="section-header">
+        <h2 class="section-title">📜 История выдач</h2>
+        <button class="refresh-btn" onclick="loadHistory()">🔄 Обновить</button>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchHistoryTab('system',this)">Системные</button>
+        <button class="tab" onclick="switchHistoryTab('imported',this)">Импортированные</button>
+      </div>
+      <div class="table-container">
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead id="history-thead"></thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
         </div>
       </div>
-    </div>
+    </section>
 
+    <!-- ═══════ SECTION: SEARCH ═══════ -->
+    <section class="section" id="section-search">
+      <div class="section-header">
+        <h2 class="section-title">🔍 Поиск</h2>
+      </div>
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Имя, номер заказа, Steam, игра…" oninput="debounceSearch()">
+      </div>
+      <div class="table-container">
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Источник</th>
+                <th>Заказ</th>
+                <th>Клиент</th>
+                <th>Игра</th>
+                <th>Ключ</th>
+                <th>Тир</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody id="search-tbody">
+              <tr><td colspan="7" class="text-muted" style="text-align:center;padding:40px">Введите запрос для поиска (минимум 2 символа)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ SECTION: IMPORT ═══════ -->
+    <section class="section" id="section-import">
+      <div class="section-header">
+        <h2 class="section-title">📥 Импорт Excel</h2>
+      </div>
+      <div class="import-card">
+        <p class="section-subtitle" style="margin-bottom:16px">Загрузите .xlsx файл с колонками: <b>ИГРА</b>, <b>КЛЮЧ</b>, <b>НОМЕР ЗАКАЗА</b>, <b>ФИО</b></p>
+        <div class="upload-area" id="upload-area" onclick="document.getElementById('import-file').click()">
+          <div class="upload-icon">📁</div>
+          <div class="upload-text">Нажмите или перетащите файл сюда</div>
+          <div class="text-sm text-muted mt-2" id="file-name-display"></div>
+        </div>
+        <input type="file" id="import-file" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(event)">
+        <button class="btn btn-secondary" id="preview-btn" onclick="previewImport()" disabled style="width:100%;margin-bottom:8px">Предпросмотр</button>
+        <div id="import-preview"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ASSIGN KEY MODAL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="assign-modal">
+    <div class="modal-header">
+      <h3>🎮 Назначить ключ</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <!-- filled dynamically -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-success" id="modal-submit-btn" onclick="submitAssignKey()">✅ Назначить ключ</button>
+    </div>
   </div>
 </div>
 
-<!-- ASSIGN MODAL — wide with side search -->
-<div class="modal-overlay" id="modal-assign">
-  <div class="modal-container">
-    <div class="modal-left">
-      <div class="modal-title">🔑 Назначить ключ</div>
-      <div class="modal-info" id="modal-info"></div>
-      <div id="modal-fields">
-        <div class="modal-form-group"><label>Название игры *</label><input id="m-game" placeholder="Cyberpunk 2077"></div>
-        <div class="modal-form-group"><label>Steam AppID</label><input id="m-appid" placeholder="1091500"></div>
-        <div class="modal-form-group"><label>Steam ключ *</label><input id="m-key" placeholder="XXXXX-XXXXX-XXXXX"></div>
-        <div class="modal-form-group"><label>ФИО покупателя</label><input id="m-name" placeholder="Иванов Иван Иванович"></div>
-        <div class="modal-form-group"><label>Номер заказа</label><input id="m-order" placeholder="#12345"></div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="closeAssignModal()">Отмена</button>
-        <button class="btn btn-green" id="btn-modal-assign">✅ Выдать ключ</button>
-      </div>
-    </div>
-    <div class="modal-right">
-      <div class="modal-search-title">🔍 Проверка по ФИО</div>
-      <input class="modal-search-input" id="modal-fio-search" placeholder="Введите ФИО для проверки...">
-      <div class="modal-search-results" id="modal-search-results">
-        <div class="modal-search-empty">Введите ФИО чтобы проверить историю</div>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- ═══════════════════════════════════════════════════════════════
+     TOAST CONTAINER
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="toast-container"></div>
 
-<!-- CONFIRM -->
-<div class="confirm-overlay" id="confirm-modal">
-  <div class="confirm-box">
-    <div class="confirm-text" id="confirm-text"></div>
-    <div class="confirm-actions">
-      <button class="btn btn-ghost" id="confirm-no">Отмена</button>
-      <button class="btn btn-red" id="confirm-yes">Удалить</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast-container" id="toast-container"></div>
 
 <script>
-const PATH_PREFIX=window.location.pathname.startsWith('/games/')?'/games':'';
-const API_CANDIDATES=[PATH_PREFIX, PATH_PREFIX==='/games'?'':'/games', '']
-  .map(p=>p.trim())
-  .filter((p,i,a)=>a.indexOf(p)===i)
-  .map(p=>`${p}/api/admin`);
+/* ═══════════════════════════════════════════════════════════════════
+   ██ STATE & CONFIG
+   ═══════════════════════════════════════════════════════════════════ */
+let adminToken = localStorage.getItem('admin_token') || '';
+let allLinks = [];          // все ссылки из /api/admin/links
+let statsData = {};         // статистика
+let currentSection = 'waiting';
+let refreshTimer = null;
+let selectedLink = null;    // ссылка для модалки
+let historyData = { gameLinks: [], imported: [] };
+let historyTab = 'system';
+let importFile = null;      // выбранный файл для импорта
 
-async function apiFetch(path, options){
-  let last404=null;
-  for(const base of API_CANDIDATES){
-    const resp=await fetch(base+path, options);
-    if(resp.status!==404) return resp;
-    last404=resp;
+/* ═══════════════════════════════════════════════════════════════════
+   ██ API HELPER — все запросы к /api/admin/* с x-admin-token
+   ═══════════════════════════════════════════════════════════════════ */
+async function adminApi(method, url, body = null, isFormData = false) {
+  const headers = { 'X-Admin-Token': adminToken };
+  if (!isFormData) headers['Content-Type'] = 'application/json';
+
+  const opts = { method, headers };
+  if (body) opts.body = isFormData ? body : JSON.stringify(body);
+
+  const res = await fetch(url, opts);
+  if (res.status === 401) {
+    showToast('Неверный токен. Авторизуйтесь заново.', 'error');
+    logout();
+    throw new Error('Unauthorized');
   }
-  return last404;
-}
-let allLinks=[];
-let lastWaitingCount=-1;
-let currentLinksFilter='all';
-let currentHistoryFilter='all';
-let importFileData=null;
-let currentAssignCode=null;
-let confirmCallback=null;
-
-const TIER_MAP={starter:'1',bronze:'2',silver:'3',gold:'4',diamond:'5'};
-const TIER_NAMES={starter:'Standard',bronze:'Premium',silver:'Elite',gold:'Gold',diamond:'Deluxe'};
-const TIER_CLASS={starter:'tier-starter',bronze:'tier-bronze',silver:'tier-silver',gold:'tier-gold',diamond:'tier-diamond'};
-const REGION_FLAGS={'Россия':'ru','Казахстан':'kz','Украина':'ua','Беларусь':'by','Турция':'tr','Аргентина':'ar','США':'us','Европа':'eu','Другая':'un'};
-
-function tierBadge(tier,sm){
-  const cls=sm?'tier tier-sm':'tier';
-  return `<span class="${cls} ${TIER_CLASS[tier]||''}">${TIER_MAP[tier]||'?'} ${TIER_NAMES[tier]||''}</span>`;
+  return res.json();
 }
 
-function regionHtml(c){
-  if(!c)return'<span style="color:var(--text-muted)">—</span>';
-  const code=REGION_FLAGS[c];
-  const f=code?`<img class="flag-img" src="https://flagcdn.com/w40/${code}.png" alt="${code}"> `:'';
-  return f+c;
-}
+/* ═══════════════════════════════════════════════════════════════════
+   ██ AUTH
+   ═══════════════════════════════════════════════════════════════════ */
+async function login() {
+  const input = document.getElementById('token-input');
+  const errEl = document.getElementById('auth-error');
+  const token = input.value.trim();
+  if (!token) { errEl.textContent = 'Введите токен'; return; }
 
-function formatDate(d){
-  if(!d)return'—';
-  const dt=new Date(d);
-  return dt.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})+' '+dt.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-}
-
-function normalizeStr(s){
-  return (s||'').trim().replace(/\s+/g,' ').toLowerCase();
-}
-
-function paymentSummary(link){
-  const boost=Number(link.boostAmount||0);
-  const history=Array.isArray(link.respinHistory)?link.respinHistory:[];
-  const respinTotal=history.reduce((s,r)=>s+Number(r.amount||0),0);
-  return {boost,respinTotal,total:boost+respinTotal,history};
-}
-
-// ═══ SOUND — loud, long (2.5 sec) ═══
-function playAlert(){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    const master=ctx.createGain();
-    master.gain.value=0.6;
-    master.connect(ctx.destination);
-
-    // Melody: ascending notes, each 300ms
-    const notes=[523,659,784,1047,784,1047,1319,1047];
-    notes.forEach((freq,i)=>{
-      const osc=ctx.createOscillator();
-      const env=ctx.createGain();
-      osc.type='square';
-      osc.frequency.value=freq;
-      osc.connect(env);
-      env.connect(master);
-      const t=ctx.currentTime+i*0.3;
-      env.gain.setValueAtTime(0.5,t);
-      env.gain.exponentialRampToValueAtTime(0.01,t+0.28);
-      osc.start(t);
-      osc.stop(t+0.3);
-    });
-
-    // Final sustained note
-    const fin=ctx.createOscillator();
-    const finEnv=ctx.createGain();
-    fin.type='sine';
-    fin.frequency.value=1047;
-    fin.connect(finEnv);
-    finEnv.connect(master);
-    const ft=ctx.currentTime+notes.length*0.3;
-    finEnv.gain.setValueAtTime(0.4,ft);
-    finEnv.gain.exponentialRampToValueAtTime(0.01,ft+0.6);
-    fin.start(ft);
-    fin.stop(ft+0.6);
-  }catch(e){}
-}
-
-// ═══ TOAST ═══
-function showToast(msg,type='success',dur=3500){
-  const c=document.getElementById('toast-container');
-  const t=document.createElement('div');
-  t.className='toast'+(type==='error'?' error':type==='info'?' info':'');
-  t.textContent=msg;
-  c.appendChild(t);
-  requestAnimationFrame(()=>{requestAnimationFrame(()=>t.classList.add('visible'));});
-  setTimeout(()=>{t.classList.remove('visible');setTimeout(()=>t.remove(),300);},dur);
-}
-
-// ═══ CONFIRM ═══
-function showConfirm(text,onYes){
-  document.getElementById('confirm-text').textContent=text;
-  document.getElementById('confirm-modal').classList.add('visible');
-  confirmCallback=onYes;
-}
-document.getElementById('confirm-no').onclick=()=>{document.getElementById('confirm-modal').classList.remove('visible');confirmCallback=null;};
-document.getElementById('confirm-yes').onclick=()=>{document.getElementById('confirm-modal').classList.remove('visible');if(confirmCallback)confirmCallback();confirmCallback=null;};
-
-function copyText(text){navigator.clipboard.writeText(text).then(()=>showToast('📋 Скопировано!')).catch(()=>{});}
-
-// ═══ NAV ═══
-document.querySelectorAll('.nav-item').forEach(item=>{
-  item.addEventListener('click',()=>switchSection(item.dataset.section));
-});
-function switchSection(name){
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelector(`.nav-item[data-section="${name}"]`)?.classList.add('active');
-  document.getElementById('sec-'+name)?.classList.add('active');
-  if(name==='history')loadHistory();
-  if(name==='links')renderLinksTable();
-}
-
-// ═══ LOAD DATA ═══
-async function loadData(){
-  try{
-    const r=await apiFetch('/links');
-    const data=await r.json();
-    if(!data.ok)return;
-    allLinks=data.links;
-    const wc=data.stats.waiting;
-    document.getElementById('waiting-count').textContent=wc;
-    document.getElementById('waiting-badge').textContent=wc;
-    if(lastWaitingCount>=0&&wc>lastWaitingCount){playAlert();showToast('🔔 Новый заказ ожидает ключ!','info',6000);}
-    lastWaitingCount=wc;
-    renderWaitingTable();
-    if(document.getElementById('sec-links').classList.contains('active'))renderLinksTable();
-  }catch(e){console.error(e);}
-}
-
-// ═══ WAITING TABLE ═══
-function renderWaitingTable(){
-  const waiting=allLinks.filter(l=>l.respinRequested||(l.spinCompleted&&!l.keyAssigned));
-  const tbody=document.getElementById('waiting-tbody');
-  const empty=document.getElementById('waiting-empty');
-
-  if(!waiting.length){tbody.innerHTML='';empty.style.display='block';return;}
-  empty.style.display='none';
-
-  tbody.innerHTML=waiting.map(l=>{
-    const isRespin=l.respinRequested;
-    const rt=l.respinType;
-    let banner='';
-    if(isRespin){
-      const cls=rt==='premium'?'respin-banner-premium':'respin-banner-normal';
-      const txt=rt==='premium'?'🔥 ПЕРЕКРУТКА С БУСТОМ':'🔄 ПЕРЕКРУТКА ОБЫЧНАЯ';
-      const hiddenClass=l.respinOverlayDismissed?' hidden':'';
-      banner=`<div class="respin-banner ${cls}${hiddenClass}" onclick="dismissRespinOverlay('${l.code}', this)">${txt}<br><small style="font-size:11px;font-weight:400;text-transform:none;">Нажми чтобы скрыть</small></div>`;
+  adminToken = token;
+  try {
+    const data = await adminApi('GET', '/api/admin/links');
+    if (data.ok) {
+      localStorage.setItem('admin_token', token);
+      document.getElementById('auth-overlay').style.display = 'none';
+      document.getElementById('app').classList.add('visible');
+      allLinks = data.links || [];
+      statsData = data.stats || {};
+      renderAll();
+      startAutoRefresh();
+    } else {
+      errEl.textContent = data.error || 'Ошибка авторизации';
+      adminToken = '';
     }
-
-    const av=l.steamAvatar?`<img class="avatar" src="${l.steamAvatar}" title="${l.steamName||''}">`:`<div class="avatar-placeholder">—</div>`;
-
-    const extras=[];
-    const pay=paymentSummary(l);
-    if(l.boosted||l.boostPaid)extras.push('<span class="badge badge-boost">🔥 Буст</span>');
-    if(l.spinCompleted && !l.excludeDuplicates)extras.push('<span class="badge badge-no">♻️ Без исключения повторов</span>');
-    if(l.respinCount>0)extras.push(`<span class="badge badge-respin">🔄 ×${l.respinCount}</span>`);
-    if(rt==='premium'&&isRespin)extras.push('<span class="badge badge-respin-premium">⭐ Буст</span>');
-    if(l.oldKeyNeedsPickup)extras.push('<span class="badge badge-waiting">⚠ Забрать старый ключ</span>');
-    if(pay.total>0)extras.push(`<span class="badge badge-system">💳 +${pay.total}₽</span>`);
-
-    return `<tr class="respin-row">
-      ${banner}
-      <td>${tierBadge(l.tier)}</td>
-      <td>${av}</td>
-      <td>${l.steamName||'<span style="color:var(--text-muted)">—</span>'}</td>
-      <td>${regionHtml(l.country)}</td>
-      <td>${l.excludeDuplicates?'<span class="badge badge-exclude">✓ Да</span>':'<span class="badge badge-no">Нет</span>'}</td>
-      <td>${extras.join(' ')||'—'}</td>
-      <td><button class="btn btn-sm btn-purple" onclick="openAssignModal('${l.code}')">Назначить</button></td>
-    </tr>`;
-  }).join('');
-}
-
-// ═══ ASSIGN MODAL ═══
-function openAssignModal(code){
-  currentAssignCode=code;
-  const l=allLinks.find(x=>x.code===code);
-  if(!l)return;
-
-  const steamUrl=l.steamProfileUrl||'';
-  const steamLinkHtml=steamUrl
-    ?`<div class="steam-link-wrap"><a href="${steamUrl}" target="_blank" class="steam-link-text" title="${steamUrl}">${steamUrl}</a><button class="copy-btn" onclick="event.stopPropagation();copyText('${steamUrl}')">📋</button></div>`
-    :'Не указан';
-
-  const av=l.steamAvatar?`<img class="avatar" src="${l.steamAvatar}" style="width:30px;height:30px;">`:'';
-  const pay=paymentSummary(l);
-  const respinDetails=pay.history.map(r=>`${r.type==='premium'?'premium':'normal'}: ${r.amount||0}₽`).join(', ')||'—';
-  const modalExtras=[];
-  if(l.boosted||l.boostPaid) modalExtras.push('<span class="badge badge-boost">🔥 Буст</span>');
-  modalExtras.push(l.excludeDuplicates
-    ?'<span class="badge badge-exclude">✓ С исключением повторов</span>'
-    :'<span class="badge badge-no">♻️ Без исключения повторов</span>');
-  if(l.respinCount>0) modalExtras.push(`<span class="badge badge-respin">🔄 ×${l.respinCount}</span>`);
-  if(l.respinType==='premium'&&l.respinRequested) modalExtras.push('<span class="badge badge-respin-premium">⭐ Респин с бустом</span>');
-
-  document.getElementById('modal-info').innerHTML=`
-    <div class="modal-info-row"><span class="modal-info-label">Steam профиль</span><span class="modal-info-value">${steamLinkHtml}</span></div>
-    <div class="modal-info-row"><span class="modal-info-label">Никнейм</span><span class="modal-info-value">${av} ${l.steamName||'—'}</span></div>
-    <div class="modal-info-row"><span class="modal-info-label">Регион</span><span class="modal-info-value">${regionHtml(l.country)}</span></div>
-    <div class="modal-info-row"><span class="modal-info-label">Уровень</span><span class="modal-info-value">${tierBadge(l.tier)}</span></div>
-    <div class="modal-info-row"><span class="modal-info-label">Допы</span><span class="modal-info-value">${modalExtras.join(' ')}</span></div>
-    <div class="modal-info-row"><span class="modal-info-label">Оплаты</span><span class="modal-info-value">Boost: ${pay.boost}₽ · Respin: ${respinDetails} · Итого: ${pay.total}₽</span></div>
-    <div class="modal-info-row"><span class="modal-info-label">Старый ключ</span><span class="modal-info-value">${l.oldKeyNeedsPickup?'⚠ Забрать у клиента перед выдачей нового':'—'}</span></div>
-  `;
-
-  document.getElementById('m-game').value=l.gameName||'';
-  document.getElementById('m-appid').value=l.steamAppId||'';
-  document.getElementById('m-key').value=l.gameKey||'';
-  document.getElementById('m-name').value=l.customerName||'';
-  document.getElementById('m-order').value=l.orderNumber||'';
-
-  // Reset side search
-  document.getElementById('modal-fio-search').value='';
-  document.getElementById('modal-search-results').innerHTML='<div class="modal-search-empty">Введите ФИО чтобы проверить историю</div>';
-
-  document.getElementById('modal-assign').classList.add('visible');
-}
-
-function closeAssignModal(){
-  document.getElementById('modal-assign').classList.remove('visible');
-  currentAssignCode=null;
-}
-
-document.getElementById('modal-assign').addEventListener('click',e=>{
-  if(e.target===e.currentTarget)closeAssignModal();
-});
-
-// ═══ MODAL SIDE SEARCH ═══
-let modalSearchTimeout;
-document.getElementById('modal-fio-search').addEventListener('input',e=>{
-  clearTimeout(modalSearchTimeout);
-  modalSearchTimeout=setTimeout(()=>doModalSearch(e.target.value),350);
-});
-
-// Also auto-search when ФИО field changes
-document.getElementById('m-name').addEventListener('input',e=>{
-  const fioField=document.getElementById('modal-fio-search');
-  if(!fioField.value.trim()){
-    fioField.value=e.target.value;
-    clearTimeout(modalSearchTimeout);
-    modalSearchTimeout=setTimeout(()=>doModalSearch(e.target.value),350);
+  } catch (e) {
+    errEl.textContent = 'Ошибка подключения';
+    adminToken = '';
   }
-});
+}
 
-async function doModalSearch(q){
-  const container=document.getElementById('modal-search-results');
-  const norm=normalizeStr(q);
+function logout() {
+  localStorage.removeItem('admin_token');
+  adminToken = '';
+  stopAutoRefresh();
+  document.getElementById('auth-overlay').style.display = 'flex';
+  document.getElementById('app').classList.remove('visible');
+}
 
-  if(norm.length<2){
-    container.innerHTML='<div class="modal-search-empty">Введите минимум 2 символа</div>';
+function tryAutoLogin() {
+  if (adminToken) {
+    // Попробовать автоматически войти с сохранённым токеном
+    login().catch(() => {});
+    // Чтобы input был заполнен
+    document.getElementById('token-input').value = adminToken;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ NAVIGATION — переключение секций
+   ═══════════════════════════════════════════════════════════════════ */
+function showSection(name) {
+  currentSection = name;
+  // Nav links
+  document.querySelectorAll('.sidebar-nav a').forEach(a => {
+    a.classList.toggle('active', a.dataset.section === name);
+  });
+  // Sections
+  document.querySelectorAll('.section').forEach(s => {
+    s.classList.toggle('active', s.id === `section-${name}`);
+  });
+  // Загрузить историю, если нужно
+  if (name === 'history' && !historyData.gameLinks.length && !historyData.imported.length) {
+    loadHistory();
+  }
+  // Закрыть мобильное меню
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ DATA LOADING
+   ═══════════════════════════════════════════════════════════════════ */
+async function loadAllData() {
+  try {
+    const data = await adminApi('GET', '/api/admin/links');
+    if (data.ok) {
+      allLinks = data.links || [];
+      statsData = data.stats || {};
+      renderAll();
+      document.getElementById('last-updated').textContent = 'Обновлено: ' + formatTime(new Date());
+    }
+  } catch (e) {
+    console.error('Load data error:', e);
+  }
+}
+
+async function loadHistory() {
+  try {
+    const data = await adminApi('GET', '/api/admin/history');
+    if (data.ok) {
+      historyData = { gameLinks: data.gameLinks || [], imported: data.imported || [] };
+      renderHistory();
+    }
+  } catch (e) {
+    console.error('Load history error:', e);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ AUTO REFRESH — каждые 30 секунд обновляем данные
+   ═══════════════════════════════════════════════════════════════════ */
+function startAutoRefresh() {
+  stopAutoRefresh();
+  refreshTimer = setInterval(() => {
+    if (currentSection === 'waiting' || currentSection === 'links') {
+      loadAllData();
+    }
+  }, 30000);
+}
+function stopAutoRefresh() {
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ RENDER ALL — перерисовка всех активных секций
+   ═══════════════════════════════════════════════════════════════════ */
+function renderAll() {
+  renderStats();
+  updateCounters();
+  renderWaiting();
+  renderAllLinks();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ RENDER: STATS BAR
+   ═══════════════════════════════════════════════════════════════════ */
+function renderStats() {
+  const s = statsData;
+  const byTier = s.byTier || {};
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-card accent-blue">
+      <div class="stat-value">${s.total || 0}</div>
+      <div class="stat-label">Всего ссылок</div>
+    </div>
+    <div class="stat-card accent-orange">
+      <div class="stat-value">${s.waiting || 0}</div>
+      <div class="stat-label">Ожидают</div>
+    </div>
+    <div class="stat-card accent-green">
+      <div class="stat-value">${s.completed || 0}</div>
+      <div class="stat-label">Готовы</div>
+    </div>
+    <div class="stat-card accent-gray">
+      <div class="stat-value">${s.unused || 0}</div>
+      <div class="stat-label">Не использованы</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value text-sm" style="font-size:13px;line-height:1.6">
+        ${Object.entries(byTier).map(([t, c]) => `<span class="badge badge-tier badge-${t}">${t}</span> ${c}`).join('<br>')}
+      </div>
+      <div class="stat-label">Свободные по тирам</div>
+    </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ RENDER: COUNTERS (sidebar)
+   ═══════════════════════════════════════════════════════════════════ */
+function updateCounters() {
+  const waitingCount = statsData.waiting || 0;
+  const totalCount = statsData.total || 0;
+
+  const cntW = document.getElementById('cnt-waiting');
+  cntW.textContent = waitingCount;
+  cntW.classList.toggle('zero', waitingCount === 0);
+
+  const cntT = document.getElementById('cnt-total');
+  cntT.textContent = totalCount;
+  cntT.classList.toggle('zero', totalCount === 0);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ RENDER: WAITING LIST (карточки)
+   ═══════════════════════════════════════════════════════════════════ */
+function renderWaiting() {
+  const container = document.getElementById('waiting-list');
+
+  // Фильтр: респин ИЛИ (спин завершён И ключ не назначен)
+  const waiting = allLinks.filter(l => l.respinRequested || (l.spinCompleted && !l.keyAssigned));
+
+  if (!waiting.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">✅</div>
+        <div class="empty-text">Нет заявок в ожидании</div>
+        <div class="empty-sub">Все ключи назначены!</div>
+      </div>`;
     return;
   }
 
-  try{
-    const r=await apiFetch('/search?q='+encodeURIComponent(norm));
-    const data=await r.json();
-
-    if(!data.ok||!data.results.length){
-      container.innerHTML='<div class="modal-search-empty">Ничего не найдено</div>';
-      return;
-    }
-
-    container.innerHTML=data.results.map(r=>{
-      const tierHtml=r.tier?`<span class="tier tier-sm ${TIER_CLASS[r.tier]||''}">${TIER_MAP[r.tier]||'?'}</span>`:(r.source==='imported'?'<span class="badge badge-imported">Импорт</span>':'');
-      return `<div class="modal-search-item">
-        <div class="modal-search-item-game">${r.gameName||'—'}</div>
-        <div class="modal-search-item-meta">${r.customerName||'—'} · ${tierHtml} · ${formatDate(r.createdAt)}</div>
-      </div>`;
-    }).join('');
-  }catch(e){
-    container.innerHTML='<div class="modal-search-empty">Ошибка поиска</div>';
-  }
-}
-
-document.getElementById('btn-modal-assign').addEventListener('click',async()=>{
-  if(!currentAssignCode)return;
-  const gameName=document.getElementById('m-game').value.trim();
-  const gameKey=document.getElementById('m-key').value.trim();
-  const steamAppId=document.getElementById('m-appid').value.trim();
-  const customerName=normalizeStr(document.getElementById('m-name').value).replace(/(^|\s)\S/g,l=>l.toUpperCase());
-  const orderNumber=document.getElementById('m-order').value.trim();
-
-  if(!gameName||!gameKey){showToast('Заполните название и ключ!','error');return;}
-
-  const btn=document.getElementById('btn-modal-assign');
-  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span> Сохраняем...';
-
-  try{
-    const r=await apiFetch('/assign-key',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({code:currentAssignCode,gameName,gameKey,steamAppId:steamAppId||null,customerName:customerName||null,orderNumber:orderNumber||null})
-    });
-    const data=await r.json();
-    if(data.ok){showToast('✅ Ключ выдан!');closeAssignModal();loadData();}
-    else showToast(data.error||'Ошибка','error');
-  }catch(e){showToast('Ошибка соединения','error');}
-
-  btn.disabled=false;btn.textContent='✅ Выдать ключ';
-});
-
-// ═══ GENERATOR ═══
-document.getElementById('btn-generate').addEventListener('click',async()=>{
-  const count=parseInt(document.getElementById('gen-count').value)||1;
-  const tier=document.getElementById('gen-tier').value;
-  const btn=document.getElementById('btn-generate');
-  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span>';
-
-  try{
-    const r=await apiFetch('/generate-links',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({count,tier})
-    });
-    const data=await r.json().catch(()=>({ok:false,error:`HTTP ${r.status}`}));
-    if(!r.ok || !data.ok){
-      showToast(data.error||`Ошибка генерации (${r.status})`,'error');
-      return;
-    }
-
-    const list=document.getElementById('gen-links-list');
-    list.innerHTML=data.links.map(l=>`<div class="gen-link-item" onclick="copyText('${l.url}')" title="Нажмите чтобы скопировать"><span style="flex:1">${l.url}</span><button class="copy-btn" onclick="event.stopPropagation();copyText('${l.url}')">📋</button></div>`).join('');
-    document.getElementById('gen-result').style.display='block';
-    document.getElementById('btn-copy-all').onclick=()=>copyText(data.links.map(l=>l.url).join('\n'));
-    document.getElementById('btn-export-txt').onclick=()=>{
-      const b=new Blob([data.links.map(l=>l.url).join('\n')],{type:'text/plain'});
-      const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`links_${tier}_${count}.txt`;a.click();
-    };
-    showToast(`✅ ${data.links.length} ссылок создано`);loadData();
-  }catch(e){
-    showToast('Ошибка соединения при генерации','error');
-  }finally{
-    btn.disabled=false;btn.textContent='Сгенерировать';
-  }
-});
-
-// ═══ ALL LINKS ═══
-document.querySelectorAll('#links-filters .filter-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('#links-filters .filter-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');currentLinksFilter=btn.dataset.filter;renderLinksTable();
+  // Сортировка: респины сначала, затем по дате (старые первые)
+  waiting.sort((a, b) => {
+    if (a.respinRequested && !b.respinRequested) return -1;
+    if (!a.respinRequested && b.respinRequested) return 1;
+    return new Date(a.updatedAt || a.createdAt) - new Date(b.updatedAt || b.createdAt);
   });
-});
 
-function renderLinksTable(){
-  let filtered=[...allLinks];
-  if(currentLinksFilter==='unused')filtered=filtered.filter(l=>!l.spinCompleted);
-  else if(currentLinksFilter==='used')filtered=filtered.filter(l=>l.spinCompleted);
-  else if(['starter','bronze','silver','gold','diamond'].includes(currentLinksFilter))filtered=filtered.filter(l=>l.tier===currentLinksFilter);
+  container.innerHTML = waiting.map(link => {
+    const isRespin = link.respinRequested;
+    const isPremium = link.respinType === 'premium';
+    const showBanner = isRespin && !link.respinOverlayDismissed;
 
-  const tbody=document.getElementById('links-tbody');
-  const baseUrl=window.location.origin+PATH_PREFIX+'/g/';
+    let bannerHtml = '';
+    if (showBanner) {
+      const bannerClass = isPremium ? 'premium' : 'normal';
+      const bannerText = isPremium
+        ? `💎 Перекрутка (премиум) — респин №${link.respinCount || 1}`
+        : `🔄 Перекрутка (обычная) — респин №${link.respinCount || 1}`;
+      bannerHtml = `
+        <div class="respin-banner ${bannerClass}">
+          <span>${bannerText}</span>
+          <button class="dismiss-btn" onclick="event.stopPropagation();dismissRespin('${link.code}')" title="Скрыть баннер">✕</button>
+        </div>`;
+    }
 
-  tbody.innerHTML=filtered.slice(0,300).map(l=>{
-    let st='<span style="color:var(--text-muted)">Свободна</span>';
-    if(l.spinCompleted&&l.keyAssigned&&!l.respinRequested)st='<span class="badge badge-done">Выдана</span>';
-    else if(l.respinRequested||(l.spinCompleted&&!l.keyAssigned))st='<span class="badge badge-waiting">Ожидает</span>';
-    const fullUrl=baseUrl+l.code;
+    const cardClass = isRespin ? (isPremium ? 'has-respin-premium' : 'has-respin') : '';
 
-    return `<tr>
-      <td><div class="link-cell" onclick="copyText('${fullUrl}')" title="${fullUrl} — нажмите для копирования"><span class="link-code">${l.code.substring(0,14)}…</span><span style="font-size:11px;">📋</span></div></td>
-      <td>${tierBadge(l.tier,true)}</td>
-      <td>${st}</td>
-      <td>${formatDate(l.createdAt)}</td>
-      <td><button class="btn btn-xs btn-ghost" style="color:var(--red)" onclick="deleteLink('${l.code}')">🗑</button></td>
-    </tr>`;
+    // Avatar
+    const avatarHtml = link.steamAvatar
+      ? `<img class="waiting-avatar" src="${escHtml(link.steamAvatar)}" alt="">`
+      : `<div class="waiting-avatar-placeholder">👤</div>`;
+
+    const steamName = link.steamName || 'Steam не указан';
+    const country = link.country || '—';
+    const waitTime = timeAgo(link.updatedAt || link.createdAt);
+
+    return `
+      <div class="waiting-card ${cardClass}">
+        ${bannerHtml}
+        <div class="waiting-card-body">
+          ${avatarHtml}
+          <div class="waiting-info">
+            <div class="waiting-steam-name">${escHtml(steamName)}</div>
+            <div class="waiting-meta">
+              <span>🌍 ${escHtml(country)}</span>
+              <span>⏱ ${waitTime}</span>
+              <span class="badge badge-tier badge-${link.tier}">${link.tier.toUpperCase()}</span>
+            </div>
+            <div class="badges-row">
+              ${renderExtras(link)}
+            </div>
+            ${link.note ? `<div class="note-text">📝 ${escHtml(link.note)}</div>` : ''}
+          </div>
+          <div class="waiting-actions">
+            <a class="open-link-btn" href="/g/${link.code}" target="_blank" title="Открыть страницу">🔗</a>
+            <button class="assign-btn" onclick="openAssignModal('${link.code}')">Назначить ключ</button>
+          </div>
+        </div>
+      </div>`;
   }).join('');
 }
 
-function deleteLink(code){
-  showConfirm('Удалить эту ссылку?',async()=>{
-    try{await apiFetch('/link/'+code,{method:'DELETE'});showToast('🗑 Удалено');loadData();}
-    catch(e){showToast('Ошибка','error');}
-  });
-}
+/* ═══════════════════════════════════════════════════════════════════
+   ██ EXTRAS BADGES — бейджи допов
+   ═══════════════════════════════════════════════════════════════════ */
+function renderExtras(link) {
+  const parts = [];
 
-async function dismissRespinOverlay(code, el){
-  el?.classList.add('hidden');
-  try{
-    await apiFetch('/dismiss-respin-overlay',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({code})
-    });
-  }catch(e){}
-}
-
-// ═══ HISTORY ═══
-let historyData={gameLinks:[],imported:[]};
-
-document.querySelectorAll('#history-filters .filter-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('#history-filters .filter-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');currentHistoryFilter=btn.dataset.hfilter;renderHistory();
-  });
-});
-
-document.getElementById('history-search').addEventListener('input',()=>renderHistory());
-
-async function loadHistory(){
-  try{
-    const r=await apiFetch('/history');
-    const data=await r.json();
-    if(data.ok){historyData=data;renderHistory();}
-  }catch(e){}
-}
-
-function renderHistory(){
-  const q=normalizeStr(document.getElementById('history-search').value);
-  const tbody=document.getElementById('history-tbody');
-  const emptyEl=document.getElementById('history-empty');
-  let rows=[];
-
-  if(currentHistoryFilter!=='imported'){
-    let gl=historyData.gameLinks||[];
-    if(['starter','bronze','silver','gold','diamond'].includes(currentHistoryFilter))gl=gl.filter(l=>l.tier===currentHistoryFilter);
-    gl.forEach(l=>{
-      rows.push({order:l.orderNumber||l.code?.substring(0,8),name:l.customerName||'',
-        steam:l.steamName||l.steamId||'',tier:l.tier,game:l.gameName||'',key:l.gameKey||'',
-        extras:[l.boosted?'🔥':'',l.respinCount>0?`🔄×${l.respinCount}`:''
-        ].filter(Boolean).join(' '),source:'system',date:l.updatedAt});
-    });
+  // Буст
+  if (link.boosted || link.boostPaid) {
+    parts.push('<span class="badge badge-boost">🔥 Буст</span>');
   }
 
-  if(currentHistoryFilter==='all'||currentHistoryFilter==='imported'){
-    (historyData.imported||[]).forEach(i=>{
-      rows.push({order:i.orderNumber||'',name:i.customerName||'',steam:'',tier:null,
-        game:i.gameName||'',key:i.gameKey||'',extras:'',source:'imported',date:i.createdAt});
-    });
+  // Исключение дубликатов
+  if (link.excludeDuplicates) {
+    parts.push('<span class="badge badge-exclude">🎯 Без дублей</span>');
+  } else if (link.spinCompleted) {
+    parts.push('<span class="badge badge-no-exclude">⚠️ Дубли возможны</span>');
   }
 
-  if(q.length>=2){
-    rows=rows.filter(r=>
-      normalizeStr(r.name).includes(q)||
-      normalizeStr(r.game).includes(q)||
-      normalizeStr(r.key).includes(q)||
-      normalizeStr(r.order).includes(q)||
-      normalizeStr(r.steam).includes(q)
+  // Респин count
+  if (link.respinCount > 0) {
+    parts.push(`<span class="badge badge-respin">🔄 Респин ×${link.respinCount}</span>`);
+  }
+
+  // Премиум респин
+  if (link.respinType === 'premium') {
+    parts.push('<span class="badge badge-premium">💎 Премиум</span>');
+  }
+
+  // Старый ключ
+  if (link.oldKeyNeedsPickup) {
+    parts.push('<span class="badge badge-warning">⚠️ Старый ключ</span>');
+  }
+
+  // Суммарная оплата
+  const total = calcTotalPaid(link);
+  if (total > 0) {
+    parts.push(`<span class="badge badge-payment">💰 ${total}₽</span>`);
+  }
+
+  return parts.join('');
+}
+
+function calcTotalPaid(link) {
+  let total = 0;
+  if (link.boostPaid && link.boostAmount) total += link.boostAmount;
+  if (link.respinHistory && link.respinHistory.length > 0) {
+    link.respinHistory.forEach(r => { total += r.amount || 0; });
+  }
+  return total;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ RENDER: ALL LINKS TABLE
+   ═══════════════════════════════════════════════════════════════════ */
+function renderAllLinks() {
+  const tbody = document.getElementById('links-tbody');
+  const tierFilter = document.getElementById('filter-tier').value;
+  const statusFilter = document.getElementById('filter-status').value;
+  const searchFilter = (document.getElementById('filter-search').value || '').toLowerCase().trim();
+
+  let filtered = allLinks;
+
+  // Tier filter
+  if (tierFilter !== 'all') filtered = filtered.filter(l => l.tier === tierFilter);
+
+  // Status filter
+  if (statusFilter === 'waiting') {
+    filtered = filtered.filter(l => l.respinRequested || (l.spinCompleted && !l.keyAssigned));
+  } else if (statusFilter === 'completed') {
+    filtered = filtered.filter(l => l.keyAssigned && !l.respinRequested);
+  } else if (statusFilter === 'unused') {
+    filtered = filtered.filter(l => !l.spinCompleted);
+  }
+
+  // Search filter
+  if (searchFilter) {
+    filtered = filtered.filter(l =>
+      (l.code && l.code.toLowerCase().includes(searchFilter)) ||
+      (l.steamName && l.steamName.toLowerCase().includes(searchFilter)) ||
+      (l.gameName && l.gameName.toLowerCase().includes(searchFilter)) ||
+      (l.customerName && l.customerName.toLowerCase().includes(searchFilter)) ||
+      (l.orderNumber && l.orderNumber.toLowerCase().includes(searchFilter))
     );
   }
 
-  if(!rows.length){tbody.innerHTML='';emptyEl.style.display='block';return;}
-  emptyEl.style.display='none';
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px" class="text-muted">Нет ссылок</td></tr>';
+    return;
+  }
 
-  tbody.innerHTML=rows.slice(0,300).map(r=>{
-    const keyEsc=(r.key||'').replace(/'/g,"\\'");
+  tbody.innerHTML = filtered.map(l => {
+    const status = getStatus(l);
+    const statusBadge = `<span class="badge badge-status-${status.key}">${status.label}</span>`;
+
     return `<tr>
-      <td>${r.order||'—'}</td>
-      <td>${r.name||'—'}</td>
-      <td>${r.steam||'—'}</td>
-      <td>${r.tier?tierBadge(r.tier,true):(r.source==='imported'?'<span class="badge badge-imported">Импорт</span>':'—')}</td>
-      <td>${r.game||'—'}</td>
-      <td><span class="key-cell" onclick="this.textContent='${keyEsc}'">●●●●●●●●</span></td>
-      <td>${r.extras||'—'}</td>
+      <td class="code-cell" title="${escHtml(l.code)}">
+        ${escHtml(l.code.slice(0, 12))}…
+        <button class="copy-btn" onclick="event.stopPropagation();copyText('${escHtml(l.code)}',this)" title="Скопировать код">📋</button>
+      </td>
+      <td><span class="badge badge-tier badge-${l.tier}">${l.tier.toUpperCase()}</span></td>
+      <td>${statusBadge}</td>
+      <td>${l.steamName ? escHtml(l.steamName) : '<span class="text-muted">—</span>'}</td>
+      <td>${l.gameName ? escHtml(l.gameName) : '<span class="text-muted">—</span>'}</td>
+      <td class="text-sm text-muted">${formatDate(l.createdAt)}</td>
+      <td class="actions-cell">
+        <a href="/g/${l.code}" target="_blank" title="Открыть">🔗</a>
+        <button class="delete-btn" onclick="event.stopPropagation();deleteLink('${l.code}')" title="Удалить">🗑️</button>
+      </td>
     </tr>`;
   }).join('');
 }
 
-document.getElementById('btn-export-csv').addEventListener('click',()=>{
-  let rows=[];
-  (historyData.gameLinks||[]).forEach(l=>{rows.push([l.orderNumber||l.code,l.customerName,l.steamId,l.tier,l.gameName,l.gameKey].join(','));});
-  (historyData.imported||[]).forEach(i=>{rows.push([i.orderNumber,i.customerName,'','imported',i.gameName,i.gameKey].join(','));});
-  const csv='Заказ,ФИО,SteamID,Уровень,Игра,Ключ\n'+rows.join('\n');
-  const b=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='history.csv';a.click();
-  showToast('📊 CSV скачан');
-});
-
-// ═══ IMPORT ═══
-const dropZone=document.getElementById('drop-zone');
-const importFile=document.getElementById('import-file');
-dropZone.addEventListener('click',()=>importFile.click());
-dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover');});
-dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');if(e.dataTransfer.files.length)handleImport(e.dataTransfer.files[0]);});
-importFile.addEventListener('change',e=>{if(e.target.files.length)handleImport(e.target.files[0]);});
-
-async function handleImport(file){
-  importFileData=file;
-  const fd=new FormData();fd.append('file',file);
-  try{
-    const r=await apiFetch('/import',{method:'POST',body:fd});
-    const data=await r.json();
-    if(data.ok&&data.preview){
-      document.getElementById('import-total').textContent=data.totalRows;
-      document.getElementById('import-tbody').innerHTML=data.preview.map(r=>`<tr><td>${r.gameName}</td><td>${r.gameKey}</td><td>${r.orderNumber}</td><td>${r.customerName}</td></tr>`).join('');
-      document.getElementById('import-preview').style.display='block';
-    }else{showToast(data.error||'Ошибка','error');}
-  }catch(e){showToast('Ошибка загрузки','error');}
+function getStatus(link) {
+  if (link.respinRequested || (link.spinCompleted && !link.keyAssigned)) {
+    return { key: 'waiting', label: '⏳ Ожидает' };
+  }
+  if (link.keyAssigned) {
+    return { key: 'done', label: '✅ Готов' };
+  }
+  return { key: 'unused', label: '🔘 Не использован' };
 }
 
-document.getElementById('btn-import-confirm').addEventListener('click',async()=>{
-  if(!importFileData)return;
-  const btn=document.getElementById('btn-import-confirm');
-  btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span>';
-  const fd=new FormData();fd.append('file',importFileData);
-  try{
-    const r=await apiFetch('/import-confirm',{method:'POST',body:fd});
-    const data=await r.json();
-    if(data.ok){showToast(`✅ ${data.imported} записей импортировано`);document.getElementById('import-preview').style.display='none';importFileData=null;}
-    else showToast(data.error||'Ошибка','error');
-  }catch(e){showToast('Ошибка','error');}
-  btn.disabled=false;btn.textContent='✅ Импортировать';
+/* ═══════════════════════════════════════════════════════════════════
+   ██ RENDER: HISTORY
+   ═══════════════════════════════════════════════════════════════════ */
+function switchHistoryTab(tab, btnEl) {
+  historyTab = tab;
+  document.querySelectorAll('#section-history .tab').forEach(t => t.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  renderHistory();
+}
+
+function renderHistory() {
+  const thead = document.getElementById('history-thead');
+  const tbody = document.getElementById('history-tbody');
+
+  if (historyTab === 'system') {
+    thead.innerHTML = `<tr>
+      <th>Заказ</th><th>Клиент</th><th>Тир</th><th>Игра</th><th>Ключ</th><th>Допы</th><th>Дата</th>
+    </tr>`;
+
+    const items = historyData.gameLinks || [];
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:40px">Нет данных</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(l => `<tr>
+      <td>${escHtml(l.orderNumber || l.code?.slice(0,8) || '—')}</td>
+      <td>${escHtml(l.customerName || l.steamName || '—')}</td>
+      <td><span class="badge badge-tier badge-${l.tier}">${(l.tier||'').toUpperCase()}</span></td>
+      <td>${escHtml(l.gameName || '—')}</td>
+      <td class="code-cell">${escHtml(l.gameKey || '—')}</td>
+      <td>${renderExtras(l)}</td>
+      <td class="text-sm text-muted">${formatDate(l.updatedAt || l.createdAt)}</td>
+    </tr>`).join('');
+  } else {
+    thead.innerHTML = `<tr>
+      <th>Заказ</th><th>Клиент</th><th>Игра</th><th>Ключ</th><th>Дата</th>
+    </tr>`;
+
+    const items = historyData.imported || [];
+    if (!items.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-muted" style="text-align:center;padding:40px">Нет данных</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = items.map(i => `<tr>
+      <td>${escHtml(i.orderNumber || '—')}</td>
+      <td>${escHtml(i.customerName || '—')}</td>
+      <td>${escHtml(i.gameName || '—')}</td>
+      <td class="code-cell">${escHtml(i.gameKey || '—')}</td>
+      <td class="text-sm text-muted">${formatDate(i.createdAt)}</td>
+    </tr>`).join('');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ MODAL: ASSIGN KEY
+   ═══════════════════════════════════════════════════════════════════ */
+function openAssignModal(code) {
+  const link = allLinks.find(l => l.code === code);
+  if (!link) return showToast('Ссылка не найдена', 'error');
+  selectedLink = link;
+
+  const body = document.getElementById('modal-body');
+
+  // ─── Steam profile card ───
+  let steamHtml;
+  if (link.steamAvatar || link.steamName) {
+    steamHtml = `
+      <div class="steam-profile-card">
+        ${link.steamAvatar ? `<img src="${escHtml(link.steamAvatar)}" alt="">` : ''}
+        <div class="steam-profile-info">
+          <h4>${escHtml(link.steamName || '—')}</h4>
+          <p>ID: ${escHtml(link.steamId || '—')}</p>
+          ${link.steamProfileUrl ? `<p><a href="${escHtml(link.steamProfileUrl)}" target="_blank">Открыть профиль ↗</a></p>` : ''}
+        </div>
+      </div>`;
+  } else {
+    steamHtml = `<div class="steam-profile-card"><div class="steam-profile-info"><h4>Steam не указан</h4></div></div>`;
+  }
+
+  // ─── Info grid ───
+  const totalPaid = calcTotalPaid(link);
+  let infoHtml = `
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">Тир</div>
+        <div class="info-value"><span class="badge badge-tier badge-${link.tier}">${link.tier.toUpperCase()}</span></div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Регион</div>
+        <div class="info-value">${escHtml(link.country || '—')}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Оплачено допов</div>
+        <div class="info-value">${totalPaid > 0 ? totalPaid + '₽' : '—'}</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">Респинов</div>
+        <div class="info-value">${link.respinCount || 0}</div>
+      </div>
+    </div>`;
+
+  // ─── Extras badges ───
+  const extras = renderExtras(link);
+  let extrasHtml = extras ? `<div class="mb-2"><b style="font-size:13px;color:#475569">Допы:</b><div class="badges-row mt-2">${extras}</div></div>` : '';
+
+  // ─── Old key block ───
+  let oldKeyHtml = '';
+  if (link.previousGameName || link.previousGameKey) {
+    oldKeyHtml = `
+      <div class="old-key-block">
+        <div class="old-key-title">⚠️ Предыдущий ключ (старый)</div>
+        <div>Игра: <b>${escHtml(link.previousGameName || '—')}</b></div>
+        <div>Ключ: <span class="old-key-value">${escHtml(link.previousGameKey || '—')}</span></div>
+        ${link.previousSteamAppId ? `<div>App ID: ${escHtml(link.previousSteamAppId)}</div>` : ''}
+      </div>`;
+  }
+
+  // ─── Form fields ───
+  const formHtml = `
+    <div class="form-group">
+      <label class="form-label">Название игры *</label>
+      <input type="text" class="form-input" id="modal-game-name" placeholder="Counter-Strike 2" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ключ игры *</label>
+      <input type="text" class="form-input" id="modal-game-key" placeholder="XXXXX-XXXXX-XXXXX" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Steam App ID (опционально)</label>
+      <input type="text" class="form-input" id="modal-steam-appid" placeholder="730">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Имя клиента</label>
+        <input type="text" class="form-input" id="modal-customer-name" value="${escAttr(link.customerName || '')}" placeholder="Иван Иванов">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Номер заказа</label>
+        <input type="text" class="form-input" id="modal-order-number" value="${escAttr(link.orderNumber || '')}" placeholder="12345">
+      </div>
+    </div>`;
+
+  body.innerHTML = steamHtml + infoHtml + extrasHtml + oldKeyHtml + formHtml;
+
+  document.getElementById('modal-overlay').classList.add('visible');
+  // Фокус на поле игры
+  setTimeout(() => document.getElementById('modal-game-name')?.focus(), 200);
+}
+
+async function submitAssignKey() {
+  if (!selectedLink) return;
+  const gameName = document.getElementById('modal-game-name').value.trim();
+  const gameKey = document.getElementById('modal-game-key').value.trim();
+  const steamAppId = document.getElementById('modal-steam-appid').value.trim();
+  const customerName = document.getElementById('modal-customer-name').value.trim();
+  const orderNumber = document.getElementById('modal-order-number').value.trim();
+
+  if (!gameName || !gameKey) return showToast('Заполните название игры и ключ', 'error');
+
+  const btn = document.getElementById('modal-submit-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Сохраняю…';
+
+  try {
+    const data = await adminApi('POST', '/api/admin/assign-key', {
+      code: selectedLink.code,
+      gameName, gameKey, steamAppId, customerName, orderNumber
+    });
+
+    if (data.ok) {
+      showToast(`Ключ назначен: ${gameName}`, 'success');
+      closeModal();
+      await loadAllData();
+    } else {
+      showToast(data.error || 'Ошибка назначения', 'error');
+    }
+  } catch (e) {
+    showToast('Ошибка сервера', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✅ Назначить ключ';
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('visible');
+  selectedLink = null;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ GENERATOR — создание новых ссылок
+   ═══════════════════════════════════════════════════════════════════ */
+async function generateLinks() {
+  const count = parseInt(document.getElementById('gen-count').value) || 1;
+  const tier = document.getElementById('gen-tier').value;
+  const note = document.getElementById('gen-note').value.trim();
+  const btn = document.getElementById('gen-btn');
+  const resultsEl = document.getElementById('gen-results');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Генерация…';
+
+  try {
+    const data = await adminApi('POST', '/api/admin/generate-links', { count, tier, note });
+
+    if (data.ok && data.links) {
+      showToast(`Создано ${data.links.length} ссылок`, 'success');
+
+      const linksHtml = data.links.map(l => `
+        <div class="generated-link-item">
+          <span class="badge badge-tier badge-${l.tier}">${l.tier.toUpperCase()}</span>
+          <span class="link-url" title="${escHtml(l.url)}">${escHtml(l.url)}</span>
+          <button class="copy-btn" onclick="copyText('${escHtml(l.url)}',this)">📋 Copy</button>
+        </div>`).join('');
+
+      resultsEl.innerHTML = `
+        <div class="generated-links">
+          <div class="generated-links-header">
+            <b>Созданные ссылки (${data.links.length}):</b>
+            <div class="flex gap-2">
+              <button class="btn btn-sm btn-secondary" onclick="copyAllLinks()">📋 Копировать все</button>
+              <button class="btn btn-sm btn-secondary" onclick="exportLinksTxt()">📥 Экспорт TXT</button>
+            </div>
+          </div>
+          ${linksHtml}
+        </div>`;
+
+      // Сохранить для copy/export
+      resultsEl._links = data.links;
+      await loadAllData();
+    } else {
+      showToast(data.error || 'Ошибка генерации', 'error');
+    }
+  } catch (e) {
+    showToast('Ошибка сервера', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Сгенерировать';
+  }
+}
+
+function copyAllLinks() {
+  const resultsEl = document.getElementById('gen-results');
+  const links = resultsEl._links;
+  if (!links || !links.length) return;
+  const text = links.map(l => l.url).join('\n');
+  copyText(text);
+  showToast('Все ссылки скопированы!', 'success');
+}
+
+function exportLinksTxt() {
+  const resultsEl = document.getElementById('gen-results');
+  const links = resultsEl._links;
+  if (!links || !links.length) return;
+  const text = links.map(l => l.url).join('\n');
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `links_${links[0].tier}_${links.length}_${Date.now()}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Файл скачан', 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ ACTIONS — удаление, dismiss
+   ═══════════════════════════════════════════════════════════════════ */
+async function deleteLink(code) {
+  if (!confirm(`Удалить ссылку ${code.slice(0, 12)}…?`)) return;
+  try {
+    await adminApi('DELETE', `/api/admin/link/${code}`);
+    showToast('Ссылка удалена', 'success');
+    await loadAllData();
+  } catch (e) {
+    showToast('Ошибка удаления', 'error');
+  }
+}
+
+async function dismissRespin(code) {
+  try {
+    await adminApi('POST', '/api/admin/dismiss-respin-overlay', { code });
+    // Обновить локально без полной перезагрузки
+    const link = allLinks.find(l => l.code === code);
+    if (link) link.respinOverlayDismissed = true;
+    renderWaiting();
+  } catch (e) {
+    showToast('Ошибка', 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ SEARCH — поиск по имени/заказу
+   ═══════════════════════════════════════════════════════════════════ */
+let searchDebounce = null;
+function debounceSearch() {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(performSearch, 300);
+}
+
+async function performSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  const tbody = document.getElementById('search-tbody');
+
+  if (q.length < 2) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:40px">Введите минимум 2 символа</td></tr>';
+    return;
+  }
+
+  try {
+    const data = await adminApi('GET', `/api/admin/search?q=${encodeURIComponent(q)}`);
+    if (!data.ok) { showToast(data.error, 'error'); return; }
+
+    const results = data.results || [];
+    if (!results.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="text-align:center;padding:40px">Ничего не найдено</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = results.map(r => {
+      const srcBadge = r.source === 'system'
+        ? '<span class="badge badge-status-done">Система</span>'
+        : '<span class="badge badge-status-unused">Импорт</span>';
+
+      return `<tr>
+        <td>${srcBadge}</td>
+        <td>${escHtml(r.orderNumber || '—')}</td>
+        <td>${escHtml(r.customerName || '—')}</td>
+        <td>${escHtml(r.gameName || '—')}</td>
+        <td class="code-cell">${escHtml(r.gameKey || '—')}</td>
+        <td>${r.tier ? `<span class="badge badge-tier badge-${r.tier}">${r.tier.toUpperCase()}</span>` : '—'}</td>
+        <td class="text-sm text-muted">${formatDate(r.createdAt)}</td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    showToast('Ошибка поиска', 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ IMPORT — загрузка Excel
+   ═══════════════════════════════════════════════════════════════════ */
+function handleFileSelect(event) {
+  importFile = event.target.files[0] || null;
+  const displayEl = document.getElementById('file-name-display');
+  const previewBtn = document.getElementById('preview-btn');
+  if (importFile) {
+    displayEl.textContent = `📄 ${importFile.name} (${(importFile.size / 1024).toFixed(1)} KB)`;
+    previewBtn.disabled = false;
+  } else {
+    displayEl.textContent = '';
+    previewBtn.disabled = true;
+  }
+  document.getElementById('import-preview').innerHTML = '';
+}
+
+// Drag & drop на upload area
+document.addEventListener('DOMContentLoaded', () => {
+  const area = document.getElementById('upload-area');
+  if (!area) return;
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('dragover'); });
+  area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+  area.addEventListener('drop', e => {
+    e.preventDefault();
+    area.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length) {
+      document.getElementById('import-file').files = files;
+      handleFileSelect({ target: { files } });
+    }
+  });
 });
 
-// ═══ POLLING ═══
-loadData();
-setInterval(loadData,8000);
+async function previewImport() {
+  if (!importFile) return showToast('Выберите файл', 'error');
+  const formData = new FormData();
+  formData.append('file', importFile);
+
+  try {
+    const data = await adminApi('POST', '/api/admin/import', formData, true);
+    if (!data.ok) { showToast(data.error || 'Ошибка', 'error'); return; }
+
+    const preview = data.preview || [];
+    const total = data.totalRows || 0;
+
+    let html = `
+      <div class="mt-4">
+        <b>Предпросмотр (${preview.length} из ${total} строк):</b>
+        <div class="table-container mt-2" style="max-height:250px;overflow:auto">
+          <table class="data-table">
+            <thead><tr><th>Игра</th><th>Ключ</th><th>Заказ</th><th>ФИО</th></tr></thead>
+            <tbody>
+              ${preview.map(r => `<tr>
+                <td>${escHtml(r.gameName)}</td>
+                <td class="code-cell">${escHtml(r.gameKey)}</td>
+                <td>${escHtml(r.orderNumber)}</td>
+                <td>${escHtml(r.customerName)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="flex justify-between items-center mt-4" style="gap:10px">
+          <span class="text-sm text-muted">Всего строк: ${total}</span>
+          <button class="btn btn-success" id="confirm-import-btn" onclick="confirmImport()">✅ Импортировать ${total} записей</button>
+        </div>
+      </div>`;
+
+    document.getElementById('import-preview').innerHTML = html;
+  } catch (e) {
+    showToast('Ошибка предпросмотра', 'error');
+  }
+}
+
+async function confirmImport() {
+  if (!importFile) return;
+  const btn = document.getElementById('confirm-import-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Импорт…';
+
+  const formData = new FormData();
+  formData.append('file', importFile);
+
+  try {
+    const data = await adminApi('POST', '/api/admin/import-confirm', formData, true);
+    if (data.ok) {
+      showToast(`Импортировано ${data.imported} записей`, 'success');
+      document.getElementById('import-preview').innerHTML = '';
+      document.getElementById('file-name-display').textContent = '';
+      document.getElementById('preview-btn').disabled = true;
+      importFile = null;
+      document.getElementById('import-file').value = '';
+    } else {
+      showToast(data.error || 'Ошибка импорта', 'error');
+    }
+  } catch (e) {
+    showToast('Ошибка импорта', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✅ Импортировать'; }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ TOAST — уведомления
+   ═══════════════════════════════════════════════════════════════════ */
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  toast.innerHTML = `<span>${icons[type] || ''}</span><span>${escHtml(message)}</span>`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('hiding');
+    setTimeout(() => toast.remove(), 200);
+  }, 3500);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ UTILITIES
+   ═══════════════════════════════════════════════════════════════════ */
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(str) {
+  return escHtml(str);
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
+function formatTime(d) {
+  return new Date(d).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function timeAgo(d) {
+  if (!d) return '—';
+  const diff = Date.now() - new Date(d).getTime();
+  const min = Math.floor(diff / 60000);
+  const hrs = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (min < 1) return 'только что';
+  if (min < 60) return `${min} мин`;
+  if (hrs < 24) return `${hrs} ч`;
+  return `${days} дн`;
+}
+
+function copyText(text, btnEl) {
+  navigator.clipboard.writeText(text).then(() => {
+    if (btnEl) {
+      const orig = btnEl.textContent;
+      btnEl.textContent = '✓';
+      btnEl.classList.add('copied');
+      setTimeout(() => { btnEl.textContent = orig; btnEl.classList.remove('copied'); }, 1500);
+    }
+  }).catch(() => showToast('Ошибка копирования', 'error'));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ KEYBOARD SHORTCUTS
+   ═══════════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  // Enter в auth
+  if (e.key === 'Enter' && document.getElementById('auth-overlay').style.display !== 'none') {
+    login();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   ██ INIT
+   ═══════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  tryAutoLogin();
+});
 </script>
 </body>
 </html>
