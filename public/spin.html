@@ -661,7 +661,6 @@ async function loadLink({preserveStep=false}={}){
       }
       if(params.get('respin_success')==='1'){
         startPaymentReturnGuard();
-        clearTimeout(paymentReturnGuardTimer);
         updateUrlParam('respin_success', null);
         resetPendingPaymentState();
         restoreSavedChoices(data);
@@ -1134,7 +1133,13 @@ document.getElementById('btn-respin-boost')?.addEventListener('click',()=>doResp
 
 (function(){
   const p=new URLSearchParams(window.location.search);
+  const hasFailed = p.get('boost_failed')==='1' || p.get('respin_failed')==='1';
   ['boost_failed','respin_failed'].forEach(key=>{if(p.get(key)==='1') updateUrlParam(key,null);});
+  if(hasFailed){
+    resetPendingPaymentState();
+    resetPaymentButtons();
+    setTimeout(()=>showToast('Оплата не завершена. Вы можете попробовать снова.','error',4500),120);
+  }
 })();
 
 document.getElementById('btn-steam-help').addEventListener('click',()=>{
